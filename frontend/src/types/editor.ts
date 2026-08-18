@@ -78,10 +78,14 @@ export interface IEditorState {
   selectedBlockId: string | null;
   /** Agrega un bloque a la landing desde su definición. */
   addBlock(definition: IBlockDefinition): void;
+  /** Agrega un bloque a la landing en una posición concreta (drag & drop). */
+  addBlockAt(definition: IBlockDefinition, index: number): void;
   /** Elimina un bloque por su identificador de instancia. */
   removeBlock(instanceId: string): void;
   /** Mueve un bloque hacia arriba o abajo en el orden de la landing. */
   moveBlock(instanceId: string, direction: 'up' | 'down'): void;
+  /** Reordena un bloque a la posición de otro (drag & drop del canvas). */
+  reorderBlock(activeInstanceId: string, overInstanceId: string): void;
   /** Selecciona un bloque (o deselecciona con `null`). */
   selectBlock(instanceId: string | null): void;
   /** Actualiza la configuración de un bloque de forma inmutable. */

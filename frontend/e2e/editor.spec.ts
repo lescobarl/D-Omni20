@@ -7,9 +7,8 @@
  * - Eliminación de bloques y su impacto en canvas y código compilado.
  * - Compilación: estructura del HTML generado (workflow, título, bloques y configuración).
  *
- * Nota: el editor de Fase 1 inserta bloques mediante botones accesibles (click), no con
- * HTML5 drag & drop. El arrastre real (dnd-kit) está planificado para una fase posterior
- * y su estado se cubre a nivel de store (`canvasStore`).
+ * Nota: el panel de código renderiza Monaco Editor (`.monaco-editor`); los flujos de arrastre
+ * (dnd-kit) se cubren a nivel de store (`canvasStore`) y con los tests unitarios del editor.
  */
 import { expect, test } from '@playwright/test';
 
@@ -47,11 +46,17 @@ test.describe('Editor de landings (E2E)', () => {
     await expect(main.getByText('Comprar ahora')).toBeVisible();
     await expect(main.getByText('Impuesto: 0.16 · Moneda: MXN')).toBeVisible();
 
-    // Panel de código: representación compilada de la landing.
-    const code = page.getByRole('complementary', { name: CODE_PANEL_LABEL }).locator('code');
-    await expect(code).toContainText('block--hero');
+    // Panel de código: representación compilada de la landing (Monaco Editor).
+    const code = page
+      .getByRole('complementary', { name: CODE_PANEL_LABEL })
+      .locator('.monaco-editor');
+    // Timeout ampliado: absorbe la carga asíncrona de Monaco y su worker.
+    await expect(code).toContainText('block--hero', { timeout: 15000 });
     await expect(code).toContainText('block--calculator');
     await expect(code).toContainText('data-title="Nueva Landing"');
+
+    // Evidencia visual del editor integrado (regla 0.1 del CLAUDE.md).
+    await page.screenshot({ path: 'test-results/screenshots/editor-monaco.png', fullPage: true });
   });
 
   test('selecciona bloques en el canvas con botones accesibles (aria-pressed)', async ({
@@ -63,8 +68,8 @@ test.describe('Editor de landings (E2E)', () => {
     await library.getByRole('button', { name: /Hero con Video/ }).click();
     await library.getByRole('button', { name: /Calculadora JS/ }).click();
 
-    const heroButton = main.getByRole('button', { name: 'Hero con Video' });
-    const calculatorButton = main.getByRole('button', { name: 'Calculadora JS' });
+    const heroButton = main.getByRole('button', { name: 'Hero con Video', exact: true });
+    const calculatorButton = main.getByRole('button', { name: 'Calculadora JS', exact: true });
 
     // Ningún bloque seleccionado al inicio.
     await expect(heroButton).toHaveAttribute('aria-pressed', 'false');
@@ -84,7 +89,9 @@ test.describe('Editor de landings (E2E)', () => {
   test('elimina un bloque y lo quita del canvas y del código compilado', async ({ page }) => {
     const library = page.getByRole('complementary', { name: LIBRARY_LABEL });
     const main = page.getByRole('main');
-    const code = page.getByRole('complementary', { name: CODE_PANEL_LABEL }).locator('code');
+    const code = page
+      .getByRole('complementary', { name: CODE_PANEL_LABEL })
+      .locator('.monaco-editor');
 
     await library.getByRole('button', { name: /Hero con Video/ }).click();
     await library.getByRole('button', { name: /Calculadora JS/ }).click();
@@ -104,7 +111,9 @@ test.describe('Editor de landings (E2E)', () => {
 
   test('compila una landing con workflow, título, bloques y configuración', async ({ page }) => {
     const library = page.getByRole('complementary', { name: LIBRARY_LABEL });
-    const code = page.getByRole('complementary', { name: CODE_PANEL_LABEL }).locator('code');
+    const code = page
+      .getByRole('complementary', { name: CODE_PANEL_LABEL })
+      .locator('.monaco-editor');
 
     await library.getByRole('button', { name: /Hero con Video/ }).click();
     await library.getByRole('button', { name: /Cuadrícula de Servicios/ }).click();

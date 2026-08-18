@@ -114,4 +114,60 @@ describe('editorStore', () => {
     expect(state.landing.blocks).toHaveLength(0);
     expect(state.selectedBlockId).toBeNull();
   });
+
+  it('inserta un bloque en una posición concreta generando UUIDv4', () => {
+    const store = useEditorStore.getState();
+    store.addBlock(BLOCK_CATALOG[0]);
+    store.addBlock(BLOCK_CATALOG[1]);
+    const firstId = useEditorStore.getState().landing.blocks[0].instance_id;
+
+    useEditorStore.getState().addBlockAt(BLOCK_CATALOG[2], 0);
+
+    const blocks = useEditorStore.getState().landing.blocks;
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0].type).toBe('calculator');
+    expect(blocks[0].instance_id).toMatch(UUID_V4_PATTERN);
+    expect(blocks[1].instance_id).toBe(firstId);
+  });
+
+  it('limita el índice fuera de rango al insertar con addBlockAt', () => {
+    const store = useEditorStore.getState();
+    store.addBlock(BLOCK_CATALOG[0]);
+
+    useEditorStore.getState().addBlockAt(BLOCK_CATALOG[1], 99);
+    useEditorStore.getState().addBlockAt(BLOCK_CATALOG[2], -5);
+
+    const blocks = useEditorStore.getState().landing.blocks;
+    expect(blocks).toHaveLength(3);
+    expect(blocks[2].type).toBe('services_grid');
+    expect(blocks[0].type).toBe('calculator');
+  });
+
+  it('reordena un bloque a la posición de otro (drag & drop)', () => {
+    const store = useEditorStore.getState();
+    store.addBlock(BLOCK_CATALOG[0]);
+    store.addBlock(BLOCK_CATALOG[1]);
+    store.addBlock(BLOCK_CATALOG[2]);
+    const ids = useEditorStore.getState().landing.blocks.map((block) => block.instance_id);
+
+    useEditorStore.getState().reorderBlock(ids[0], ids[2]);
+
+    const blocks = useEditorStore.getState().landing.blocks;
+    expect(blocks.map((block) => block.instance_id)).toEqual([ids[1], ids[2], ids[0]]);
+  });
+
+  it('no modifica el estado al reordenar sobre sí mismo o con ids inexistentes', () => {
+    const store = useEditorStore.getState();
+    store.addBlock(BLOCK_CATALOG[0]);
+    store.addBlock(BLOCK_CATALOG[1]);
+    const ids = useEditorStore.getState().landing.blocks.map((block) => block.instance_id);
+    const before = useEditorStore.getState().landing.blocks;
+
+    useEditorStore.getState().reorderBlock(ids[0], ids[0]);
+    useEditorStore.getState().reorderBlock('inexistente', ids[0]);
+    useEditorStore.getState().reorderBlock(ids[0], 'inexistente');
+
+    expect(useEditorStore.getState().landing.blocks).toBe(before);
+    expect(useEditorStore.getState().landing.blocks.map((block) => block.instance_id)).toEqual(ids);
+  });
 });

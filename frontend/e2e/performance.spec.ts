@@ -31,8 +31,11 @@ test.describe('Rendimiento (E2E smoke)', () => {
     const interactionMs = Date.now() - interactionStartedAt;
     expect(interactionMs).toBeLessThan(INTERACTION_BUDGET_MS);
 
-    // El panel de código se actualiza de forma reactiva.
-    const code = page.getByRole('complementary', { name: 'Editor de código' }).locator('code');
-    await expect(code).toContainText('block--hero');
+    // El panel de código se actualiza de forma reactiva (Monaco Editor).
+    const code = page
+      .getByRole('complementary', { name: 'Editor de código' })
+      .locator('.monaco-editor');
+    // Timeout ampliado: absorbe la carga asíncrona de Monaco y su worker.
+    await expect(code).toContainText('block--hero', { timeout: 15000 });
   });
 });

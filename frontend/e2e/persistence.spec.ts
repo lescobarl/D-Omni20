@@ -25,8 +25,11 @@ test.describe('Persistencia del editor (E2E)', () => {
     await expect(main.getByText('¡Impulsa tu negocio!')).toBeVisible();
     await expect(main.getByText('Comprar ahora')).toBeVisible();
 
-    // El código compilado también refleja el estado persistido.
-    const code = page.getByRole('complementary', { name: 'Editor de código' }).locator('code');
-    await expect(code).toContainText('block--hero');
+    // El código compilado también refleja el estado persistido (Monaco Editor).
+    const code = page
+      .getByRole('complementary', { name: 'Editor de código' })
+      .locator('.monaco-editor');
+    // Timeout ampliado: absorbe la carga asíncrona de Monaco y su worker.
+    await expect(code).toContainText('block--hero', { timeout: 15000 });
   });
 });

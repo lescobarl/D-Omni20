@@ -20,6 +20,7 @@
     "validate:format": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
     "validate": "npm run validate:hardcode && npm run validate:trycatch && npm run validate:jsdoc && npm run validate:format",
+    "metrics:report": "node scripts/generate-metrics-report.mjs",
     "prepare": "cd .. && node frontend/node_modules/husky/bin.js || true"
   },
   "lint-staged": {
@@ -31,6 +32,12 @@
     ]
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.56.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.5"

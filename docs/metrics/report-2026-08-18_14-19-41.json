@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-08-18T14:19:41.573Z",
+  "thresholds": {
+    "statements": 80,
+    "lines": 80,
+    "branches": 80,
+    "functions": 80
+  },
+  "compliance_score": 55.1,
+  "frontend_coverage": {
+    "summary": {
+      "statements": {
+        "total": 1101,
+        "covered": 1045,
+        "pct": 94.91
+      },
+      "lines": {
+        "total": 1101,
+        "covered": 1045,
+        "pct": 94.91
+      },
+      "branches": {
+        "total": 209,
+        "covered": 185,
+        "pct": 88.51
+      },
+      "functions": {
+        "total": 82,
+        "covered": 73,
+        "pct": 89.02
+      }
+    },
+    "failed": false,
+    "detail": ""
+  },
+  "validators": [
+    {
+      "id": "hardcode",
+      "description": "Sin valores hardcodeados",
+      "ok": false,
+      "detail": "npm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\luis_\\AppData\\Local\\npm-cache\\_logs\\2026-08-18T14_19_33_277Z-debug-0.log\n"
+    },
+    {
+      "id": "trycatch",
+      "description": "Sin try-catch vacíos",
+      "ok": false,
+      "detail": "npm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\luis_\\AppData\\Local\\npm-cache\\_logs\\2026-08-18T14_19_34_680Z-debug-0.log\n"
+    },
+    {
+      "id": "jsdoc",
+      "description": "JSDoc completo en componentes",
+      "ok": false,
+      "detail": "npm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\luis_\\AppData\\Local\\npm-cache\\_logs\\2026-08-18T14_19_35_772Z-debug-0.log\n"
+    },
+    {
+      "id": "format",
+      "description": "Formato Prettier consistente",
+      "ok": false,
+      "detail": "npm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\luis_\\AppData\\Local\\npm-cache\\_logs\\2026-08-18T14_19_36_617Z-debug-0.log\n"
+    }
+  ],
+  "build": {
+    "ok": false,
+    "detail": "npm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\luis_\\AppData\\Local\\npm-cache\\_logs\\2026-08-18T14_19_37_523Z-debug-0.log\n"
+  },
+  "backend": {
+    "ok": true,
+    "totalPct": 95,
+    "detail": ""
+  }
+}

@@ -39,6 +39,14 @@ export const useEditorStore = create<IEditorState>()(
           },
         })),
 
+      addBlockAt: (definition: IBlockDefinition, index: number) =>
+        set((state) => {
+          const clamped = Math.max(0, Math.min(index, state.landing.blocks.length));
+          const blocks = [...state.landing.blocks];
+          blocks.splice(clamped, 0, createBlockInstance(definition));
+          return { landing: { ...state.landing, blocks } };
+        }),
+
       removeBlock: (instanceId: string) =>
         set((state) => ({
           landing: {
@@ -62,6 +70,23 @@ export const useEditorStore = create<IEditorState>()(
           const [moved] = blocks.splice(index, 1);
           blocks.splice(targetIndex, 0, moved);
           return { landing: { ...state.landing, blocks } };
+        }),
+
+      reorderBlock: (activeInstanceId: string, overInstanceId: string) =>
+        set((state) => {
+          if (activeInstanceId === overInstanceId) {
+            return state;
+          }
+          const blocks = state.landing.blocks;
+          const fromIndex = blocks.findIndex((block) => block.instance_id === activeInstanceId);
+          const toIndex = blocks.findIndex((block) => block.instance_id === overInstanceId);
+          if (fromIndex === -1 || toIndex === -1) {
+            return state;
+          }
+          const next = [...blocks];
+          const [moved] = next.splice(fromIndex, 1);
+          next.splice(toIndex, 0, moved);
+          return { landing: { ...state.landing, blocks: next } };
         }),
 
       selectBlock: (instanceId: string | null) => set({ selectedBlockId: instanceId }),

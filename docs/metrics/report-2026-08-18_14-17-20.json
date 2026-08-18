@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-08-18T14:17:20.521Z",
+  "thresholds": {
+    "statements": 80,
+    "lines": 80,
+    "branches": 80,
+    "functions": 80
+  },
+  "compliance_score": 0,
+  "frontend_coverage": {
+    "summary": null,
+    "failed": true,
+    "detail": "spawnSync npx.cmd EINVAL"
+  },
+  "validators": [
+    {
+      "id": "hardcode",
+      "description": "Sin valores hardcodeados",
+      "ok": false,
+      "detail": "spawnSync npx.cmd EINVAL"
+    },
+    {
+      "id": "trycatch",
+      "description": "Sin try-catch vacíos",
+      "ok": false,
+      "detail": "spawnSync npx.cmd EINVAL"
+    },
+    {
+      "id": "jsdoc",
+      "description": "JSDoc completo en componentes",
+      "ok": false,
+      "detail": "spawnSync npx.cmd EINVAL"
+    },
+    {
+      "id": "format",
+      "description": "Formato Prettier consistente",
+      "ok": false,
+      "detail": "spawnSync npx.cmd EINVAL"
+    }
+  ],
+  "build": {
+    "ok": false,
+    "detail": "spawnSync npx.cmd EINVAL"
+  },
+  "backend": {
+    "ok": true,
+    "totalPct": null,
+    "detail": ""
+  }
+}

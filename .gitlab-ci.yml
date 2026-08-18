@@ -1,0 +1,128 @@
+# =============================================================================
+# OmniBotIA Studio - GitLab CI (Fase 4.2) | Alternativa a GitHub Actions
+#
+# Contrato:
+# - Ejecuta validación CLAUDE, tests con cobertura (>80%) y build en cada push.
+# - Usa cache de npm/pip para acelerar ejecuciones repetidas.
+# - El stage `e2e` usa reglas para ejecutarse solo en `main`.
+# =============================================================================
+stages:
+  - validate
+  - test
+  - build
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  NODE_CACHE_PATH: "$CI_PROJECT_DIR/frontend/node_modules"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - frontend/node_modules/
+    - backend/.venv/
+    - .cache/pip/
+
+# ---------------------------------------------------------------------------
+# Frontend: validación + tests + build
+# ---------------------------------------------------------------------------
+frontend-validate:
+  stage: validate
+  image: node:20
+  script:
+    - cd frontend
+    - npm ci
+    - npm run validate:hardcode
+    - npm run validate:trycatch
+    - npm run validate:jsdoc
+    - npm run validate:format
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+frontend-test:
+  stage: test
+  image: node:20
+  script:
+    - cd frontend
+    - npm ci
+    - npm run test:coverage
+  coverage: '/All files[^|]*\|[^|]*\s+([\d.]+)/'
+  artifacts:
+    paths:
+      - frontend/coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+frontend-build:
+  stage: build
+  image: node:20
+  script:
+    - cd frontend
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ---------------------------------------------------------------------------
+# Backend: lint + tests con cobertura
+# ---------------------------------------------------------------------------
+backend-lint:
+  stage: validate
+  image: python:3.11
+  script:
+    - cd backend
+    - python -m venv .venv
+    - . .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements-dev.txt
+    - ruff check app tests
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+backend-test:
+  stage: test
+  image: python:3.11
+  script:
+    - cd backend
+    - python -m venv .venv
+    - . .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements-dev.txt
+    - pytest
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%/'
+  artifacts:
+    paths:
+      - backend/htmlcov/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+# ---------------------------------------------------------------------------
+# E2E: solo en main (los navegadores de Playwright son costosos)
+# ---------------------------------------------------------------------------
+e2e:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.62.0-focal
+  script:
+    - cd frontend
+    - npm ci
+    - npx playwright install --with-deps chromium firefox webkit
+    - npm run test:e2e
+  artifacts:
+    paths:
+      - frontend/playwright-report/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
