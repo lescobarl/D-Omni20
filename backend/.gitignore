@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Entorno (nunca commitees secretos)
+.env
+.env.local
+
+# Logs (auditoría estructurada)
+logs/
+*.log
+*.jsonl
+
+# Bases de datos locales de desarrollo / testing
+*.db
+*.sqlite3
+
+# Cobertura
+.coverage
+htmlcov/
+
+# Ruff / tooling
+.ruff_cache/
+
+# Datos de tenant locales
+data/

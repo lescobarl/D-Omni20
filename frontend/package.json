@@ -1,0 +1,60 @@
+{
+  "name": "omnibotia-studio-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Frontend del editor híbrido multi-tenant OmniBotIA Studio",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium firefox webkit",
+    "test:e2e:report": "playwright show-report",
+    "validate:hardcode": "node scripts/validate-hardcode.mjs",
+    "validate:trycatch": "node scripts/validate-trycatch.mjs",
+    "validate:jsdoc": "node scripts/validate-jsdoc.mjs",
+    "validate:format": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
+    "validate": "npm run validate:hardcode && npm run validate:trycatch && npm run validate:jsdoc && npm run validate:format",
+    "prepare": "cd .. && node frontend/node_modules/husky/bin.js || true"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx}": [
+      "prettier --write",
+      "node scripts/validate-hardcode.mjs",
+      "node scripts/validate-trycatch.mjs",
+      "node scripts/validate-jsdoc.mjs"
+    ]
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.16.5",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^3.2.7",
+    "autoprefixer": "^10.4.20",
+    "axe-core": "^4.13.0",
+    "husky": "^9.1.7",
+    "jsdom": "^24.1.3",
+    "lint-staged": "^17.3.0",
+    "postcss": "^8.4.47",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vitest": "^3.2.7"
+  }
+}

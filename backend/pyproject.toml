@@ -1,0 +1,23 @@
+[project]
+name = "omnibotia-studio-backend"
+version = "0.2.0"
+description = "OmniBotIA Studio - Backend FastAPI (Fase 2: Arquitectura Backend Adaptada)"
+requires-python = ">=3.11"
+authors = [{ name = "OmniBotIA Studio" }]
+license = { text = "Proprietary" }
+
+[tool.ruff]
+target-version = "py311"
+line-length = 110
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=app --cov-report=term-missing:skip-covered --cov-fail-under=80"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

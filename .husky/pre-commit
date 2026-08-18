@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# OmniBotIA Studio - pre-commit (monorepo: todo el tooling vive en frontend/)
+# husky v9 ejecuta los hooks desde la raíz del repo; aquí nos movemos a frontend/
+cd "$(dirname "$0")/../frontend" || exit 1
+npx lint-staged
+npm test
