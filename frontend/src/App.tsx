@@ -47,7 +47,7 @@ export default function App({ config }: IAppProps): ReactElement {
         </div>
         <p className="mt-1 text-sm text-slate-400">Landing: {landingTitle}</p>
       </header>
-      <EditorLayout />
+      <EditorLayout config={config} />
     </div>
   );
 }

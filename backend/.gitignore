@@ -16,6 +16,9 @@ logs/
 
 # Bases de datos locales de desarrollo / testing
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite3
 
 # Cobertura
@@ -24,6 +27,12 @@ htmlcov/
 
 # Ruff / tooling
 .ruff_cache/
+
+# Caches de herramientas
+.pytest_cache/
+
+# Artefactos generados en tiempo de ejecución (ICS/PDF de workflows)
+artifacts/
 
 # Datos de tenant locales
 data/

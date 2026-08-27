@@ -115,6 +115,106 @@
         "frontend_functions": true,
         "backend_total": true
       }
+    },
+    {
+      "generated_at": "2026-08-18T15:54:53.982Z",
+      "compliance_score": 86.3,
+      "frontend": {
+        "statements": 96.5,
+        "lines": 96.5,
+        "branches": 89.8,
+        "functions": 92.24
+      },
+      "backend_total": 94,
+      "validators": {
+        "hardcode": true,
+        "trycatch": true,
+        "jsdoc": true,
+        "format": true
+      },
+      "build_ok": false,
+      "thresholds": {
+        "frontend_statements": true,
+        "frontend_lines": true,
+        "frontend_branches": true,
+        "frontend_functions": true,
+        "backend_total": true
+      }
+    },
+    {
+      "generated_at": "2026-08-18T15:56:55.038Z",
+      "compliance_score": 96.3,
+      "frontend": {
+        "statements": 96.5,
+        "lines": 96.5,
+        "branches": 89.8,
+        "functions": 92.24
+      },
+      "backend_total": 94,
+      "validators": {
+        "hardcode": true,
+        "trycatch": true,
+        "jsdoc": true,
+        "format": true
+      },
+      "build_ok": true,
+      "thresholds": {
+        "frontend_statements": true,
+        "frontend_lines": true,
+        "frontend_branches": true,
+        "frontend_functions": true,
+        "backend_total": true
+      }
+    },
+    {
+      "generated_at": "2026-08-18T16:02:31.292Z",
+      "compliance_score": 96.2,
+      "frontend": {
+        "statements": 96.5,
+        "lines": 96.5,
+        "branches": 89.71,
+        "functions": 92.24
+      },
+      "backend_total": 94,
+      "validators": {
+        "hardcode": true,
+        "trycatch": true,
+        "jsdoc": true,
+        "format": true
+      },
+      "build_ok": true,
+      "thresholds": {
+        "frontend_statements": true,
+        "frontend_lines": true,
+        "frontend_branches": true,
+        "frontend_functions": true,
+        "backend_total": true
+      }
+    },
+    {
+      "generated_at": "2026-08-18T16:10:36.099Z",
+      "compliance_score": 96.2,
+      "frontend": {
+        "statements": 96.5,
+        "lines": 96.5,
+        "branches": 89.71,
+        "functions": 92.24
+      },
+      "backend_total": 94,
+      "validators": {
+        "hardcode": true,
+        "trycatch": true,
+        "jsdoc": true,
+        "format": true
+      },
+      "build_ok": true,
+      "thresholds": {
+        "frontend_statements": true,
+        "frontend_lines": true,
+        "frontend_branches": true,
+        "frontend_functions": true,
+        "backend_total": true
+      }
     }
   ]
 }

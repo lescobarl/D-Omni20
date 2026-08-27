@@ -10,6 +10,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { IBlockDefinition, IEditorState, ILandingConfig } from '@/types/editor';
 import { createBlockInstance } from '@/core/blocks';
+import { uuidv4 } from '@/utils/uuid';
 
 /**
  * Crea la configuración por defecto de una landing en blanco.
@@ -17,6 +18,7 @@ import { createBlockInstance } from '@/core/blocks';
  */
 export function createDefaultLanding(): ILandingConfig {
   return {
+    id: uuidv4(),
     campaignId: '',
     title: 'Nueva Landing',
     workflowType: 'direct_checkout',
@@ -107,6 +109,8 @@ export const useEditorStore = create<IEditorState>()(
         set((state) => ({
           landing: { ...state.landing, title },
         })),
+
+      setLanding: (landing: ILandingConfig) => set({ landing, selectedBlockId: null }),
 
       reset: () => set({ landing: createDefaultLanding(), selectedBlockId: null }),
     }),

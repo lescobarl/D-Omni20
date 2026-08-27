@@ -14,13 +14,18 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import App from '@/App';
 import { EditorLayout } from '@/components/Editor/EditorLayout';
+import { EditorRightPanel } from '@/components/Editor/RightPanel/EditorRightPanel';
+import { PreviewPanel } from '@/components/Editor/Preview/PreviewPanel';
 import { Canvas } from '@/components/Editor/Canvas/Canvas';
 import { BlocksLibrary } from '@/components/Editor/Sidebar/BlocksLibrary';
+import { EditorSidebar } from '@/components/Editor/Sidebar/EditorSidebar';
+import { AIPanel } from '@/components/Editor/Sidebar/AIPanel';
 import { CodeEditor } from '@/components/Editor/CodeEditor/CodeEditor';
 import { BlockRenderer } from '@/components/Blocks/BlockRenderer';
 import { BLOCK_CATALOG } from '@/core/blockCatalog';
 import { createBlockInstance } from '@/core/blocks';
 import { createTestConfig } from '@/test/config';
+import { useCompilerStore } from '@/store/compilerStore';
 import { useEditorStore } from '@/store/editorStore';
 
 describe('Accesibilidad (a11y)', () => {
@@ -33,16 +38,29 @@ describe('Accesibilidad (a11y)', () => {
   beforeEach(() => {
     localStorage.clear();
     useEditorStore.getState().reset();
+    useCompilerStore.getState().reset();
   });
 
   it('audita la aplicación completa sin violaciones', async () => {
-    const { container } = render(<App config={createTestConfig()} />);
+    // `act` asíncrono: el editor diferido de Monaco (React.lazy) resuelve como
+    // recurso suspendido; esperarlo dentro de act evita warnings de React.
+    let container!: HTMLElement;
+    await act(async () => {
+      container = render(<App config={createTestConfig()} />).container;
+    });
+    // Drena los microtasks pendientes (importación diferida de Monaco) dentro de
+    // act; sin esto el warning de recurso suspendido se emitiría en el test.
+    await act(async () => {});
 
     await expect(container).toHaveNoViolations();
   });
 
   it('audita el layout tri-panel del editor sin violaciones', async () => {
-    const { container } = render(<EditorLayout />);
+    let container!: HTMLElement;
+    await act(async () => {
+      container = render(<EditorLayout config={createTestConfig()} />).container;
+    });
+    await act(async () => {});
 
     await expect(container).toHaveNoViolations();
   });
@@ -68,9 +86,76 @@ describe('Accesibilidad (a11y)', () => {
   });
 
   it('audita el editor de código sin violaciones', async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      container = render(
+        <main>
+          <CodeEditor />
+        </main>,
+      ).container;
+    });
+    await act(async () => {});
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita el panel derecho con pestañas Código | Vista previa sin violaciones', async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      container = render(
+        <main>
+          <EditorRightPanel config={createTestConfig()} />
+        </main>,
+      ).container;
+    });
+    await act(async () => {});
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita el panel de vista previa en estado vacío sin violaciones', async () => {
     const { container } = render(
       <main>
-        <CodeEditor />
+        <PreviewPanel />
+      </main>,
+    );
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita el panel de vista previa en estado de error sin violaciones', async () => {
+    useCompilerStore.setState({ status: 'error', error: 'Error de compilación' });
+
+    const { container } = render(
+      <main>
+        <PreviewPanel />
+      </main>,
+    );
+
+    // El estado de error no renderiza el iframe, por lo que axe puede auditar el
+    // contenedor sin el fallo "Respondable target must be a frame" (jsdom no
+    // soporta la inyección de axe en iframes). Los atributos a11y del iframe
+    // (title, sandbox) se verifican de forma estática en PreviewPanel.test.tsx.
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita la barra lateral del editor con pestañas sin violaciones', async () => {
+    const config = createTestConfig({
+      features: { ...createTestConfig().features, aiAssistant: true },
+    });
+    const { container } = render(
+      <main>
+        <EditorSidebar config={config} />
+      </main>,
+    );
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita el panel del asistente IA sin violaciones', async () => {
+    const { container } = render(
+      <main>
+        <AIPanel />
       </main>,
     );
 

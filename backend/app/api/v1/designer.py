@@ -11,9 +11,17 @@ import uuid
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import get_current_tenant, get_landing_service
+from app.api.deps import (
+    get_ai_service,
+    get_audit_service,
+    get_current_tenant,
+    get_landing_service,
+)
+from app.models.base import utcnow
 from app.schemas.common import Page, Pagination
 from app.schemas.landing import (
+    LandingAiGenerationRequest,
+    LandingAiGenerationResponse,
     LandingCompileRequest,
     LandingCompileResponse,
     LandingCreate,
@@ -21,7 +29,7 @@ from app.schemas.landing import (
     LandingRead,
     LandingUpdate,
 )
-from app.services.interfaces import ILandingService
+from app.services.interfaces import IAiService, IAuditService, ILandingService
 
 router = APIRouter(prefix="/designer", tags=["designer"])
 
@@ -101,3 +109,42 @@ def compile_landing(
 ) -> LandingCompileResponse:
     """Compila una configuración (config → HTML) sin persistirla."""
     return service.compile(tenant_id=tenant_id, data=data)
+
+
+@router.post("/generate", response_model=LandingAiGenerationResponse)
+def generate_landing(
+    data: LandingAiGenerationRequest,
+    tenant_id: uuid.UUID = Depends(get_current_tenant),
+    ai_service: IAiService = Depends(get_ai_service),
+    audit: IAuditService = Depends(get_audit_service),
+) -> LandingAiGenerationResponse:
+    """Genera la configuración de una landing con IA (DeepSeek) y audita el uso."""
+    result = ai_service.generate_landing(
+        tenant_id=tenant_id,
+        prompt=data.prompt,
+        workflow_type=data.workflow_type,
+        brand_voice=data.brand_voice,
+    )
+    audit.record(
+        tenant_id=tenant_id,
+        operation="ai.generate",
+        entity_type="tenant_landing",
+        entity_id=None,
+        details={
+            "model": result.model,
+            "cached": result.cached,
+            "workflow_type": data.workflow_type or "none",
+            "has_brand_voice": data.brand_voice is not None,
+            "prompt_tokens": result.prompt_tokens,
+            "completion_tokens": result.completion_tokens,
+        },
+    )
+    return LandingAiGenerationResponse(
+        config=result.config,
+        model=result.model,
+        cached=result.cached,
+        brand_voice=data.brand_voice,
+        prompt_tokens=result.prompt_tokens,
+        completion_tokens=result.completion_tokens,
+        generated_at=utcnow(),
+    )

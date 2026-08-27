@@ -40,6 +40,10 @@ def test_settings(tmp_path_factory) -> Settings:
         cors_origins=["http://localhost:5173"],
         backend_env="development",
         log_level="DEBUG",
+        # Artefactos (PDF/ICS) a un directorio temporal para no ensuciar el repo.
+        workflow_artifacts_dir=str(data_dir / "artifacts"),
+        # El scheduler de recordatorios NO debe arrancar en tests (se invoca a mano).
+        reminder_enabled=False,
     )
 
 

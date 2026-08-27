@@ -13,6 +13,17 @@ import type { ILogger } from '@/lib/logger';
 import { ApiHttpError, ApiNetworkError, extractApiErrorMessage } from './errors';
 import type {
   CampaignId,
+  IAnalyticsDashboardResponse,
+  ICdnDeployResponse,
+  IAnalyticsEventCreateRequest,
+  IAnalyticsEventRead,
+  IAiGenerationRequest,
+  IAiGenerationResponse,
+  IAppointmentRequest,
+  IAppointmentResponse,
+  ICheckoutRequest,
+  ICheckoutResponse,
+  IDeveloperSchemaRead,
   IHealthResponse,
   ILandingCompileRequest,
   ILandingCompileResponse,
@@ -20,8 +31,23 @@ import type {
   ILandingPublishRequest,
   ILandingRead,
   ILandingUpdate,
+  ILeadRequest,
+  ILeadRead,
+  IMarketplaceImportRequest,
+  IMarketplaceImportResponse,
+  IMarketplaceTemplateCreateRequest,
+  IMarketplaceTemplateRead,
   IPage,
   IPageQuery,
+  IPaymentRead,
+  IQuoteRequest,
+  IQuoteResponse,
+  ISchemaGenerateRequest,
+  ISchemaGenerateResponse,
+  ISchemaValidateRequest,
+  ISchemaValidateResponse,
+  ISchemaVersionCreateRequest,
+  ISchemaVersionRead,
   LandingId,
 } from './types';
 
@@ -38,6 +64,12 @@ const API_PREFIX = '/api/v1';
 const API_PATHS = {
   health: `${API_PREFIX}/health`,
   designer: `${API_PREFIX}/designer`,
+  workflows: `${API_PREFIX}/workflows`,
+  ai: `${API_PREFIX}/ai`,
+  schemas: `${API_PREFIX}/schemas`,
+  marketplace: `${API_PREFIX}/marketplace`,
+  analytics: `${API_PREFIX}/analytics`,
+  cdn: `${API_PREFIX}/cdn`,
 } as const;
 
 /** Cabeceras base enviadas en toda petición JSON. */
@@ -66,6 +98,51 @@ export interface IApiClient {
   publishLanding(landingId: LandingId, payload?: ILandingPublishRequest): Promise<ILandingRead>;
   /** Compila una configuración (config → HTML) sin persistirla. */
   compileLanding(payload: ILandingCompileRequest): Promise<ILandingCompileResponse>;
+  /** Genera una configuración de landing con IA a partir de un prompt. */
+  generateLanding(payload: IAiGenerationRequest): Promise<IAiGenerationResponse>;
+  /** Genera un JSON Schema (Draft 2020-12) con IA a partir de un prompt. */
+  generateSchema(payload: ISchemaGenerateRequest): Promise<ISchemaGenerateResponse>;
+  /** Lista los JSON Schemas generados del tenant activo (paginado). */
+  listSchemas(query?: IPageQuery): Promise<IPage<IDeveloperSchemaRead>>;
+  /** Valida un JSON Schema (Draft 2020-12) y, opcionalmente, datos contra él. */
+  validateSchema(payload: ISchemaValidateRequest): Promise<ISchemaValidateResponse>;
+  /** Lista las versiones de un schema del tenant activo (paginado, descendente). */
+  listSchemaVersions(schemaId: string, query?: IPageQuery): Promise<IPage<ISchemaVersionRead>>;
+  /** Crea una nueva versión de un schema del tenant activo. */
+  createSchemaVersion(
+    schemaId: string,
+    payload: ISchemaVersionCreateRequest,
+  ): Promise<ISchemaVersionRead>;
+  /** Crea un checkout directo en la pasarela (workflow `direct_checkout`). */
+  createCheckout(payload: ICheckoutRequest): Promise<ICheckoutResponse>;
+  /** Confirma manualmente un pago sandbox pendiente (idempotente). */
+  confirmCheckout(paymentId: string): Promise<IPaymentRead>;
+  /** Captura un lead en el tenant activo (workflow `lead_capture`). */
+  captureLead(payload: ILeadRequest): Promise<ILeadRead>;
+  /** Genera una cotización y su PDF (workflow `quote_generator`). */
+  generateQuote(payload: IQuoteRequest): Promise<IQuoteResponse>;
+  /** Agenda una cita y genera su ICS (workflow `appointment_scheduler`). */
+  scheduleAppointment(payload: IAppointmentRequest): Promise<IAppointmentResponse>;
+  /** Lista los templates del catálogo del marketplace (opcional por categoría). */
+  listMarketplaceTemplates(
+    query?: IPageQuery,
+    category?: string,
+  ): Promise<IPage<IMarketplaceTemplateRead>>;
+  /** Publica un template en el marketplace del tenant activo. */
+  createMarketplaceTemplate(
+    payload: IMarketplaceTemplateCreateRequest,
+  ): Promise<IMarketplaceTemplateRead>;
+  /** Importa un template del marketplace a una campaña (genera una landing). */
+  importMarketplaceTemplate(
+    templateId: string,
+    payload: IMarketplaceImportRequest,
+  ): Promise<IMarketplaceImportResponse>;
+  /** Registra un evento de analítica en el tenant activo. */
+  recordAnalyticsEvent(payload: IAnalyticsEventCreateRequest): Promise<IAnalyticsEventRead>;
+  /** Obtiene el resumen del dashboard de analítica del tenant activo. */
+  getAnalyticsDashboard(): Promise<IAnalyticsDashboardResponse>;
+  /** Despliega la landing del tenant activo al CDN. */
+  deployToCdn(landingId: LandingId): Promise<ICdnDeployResponse>;
 }
 
 /** Opciones de construcción del cliente HTTP (composition root). */
@@ -183,6 +260,184 @@ export class HttpApiClient implements IApiClient {
     });
   }
 
+  /** Genera una configuración de landing con IA a partir de un prompt. */
+  public async generateLanding(payload: IAiGenerationRequest): Promise<IAiGenerationResponse> {
+    return this.request<IAiGenerationResponse>('POST', `${API_PATHS.designer}/generate`, {
+      operation: 'api.landing.generate',
+      body: payload,
+    });
+  }
+
+  /** Genera un JSON Schema (Draft 2020-12) con IA a partir de un prompt. */
+  public async generateSchema(payload: ISchemaGenerateRequest): Promise<ISchemaGenerateResponse> {
+    return this.request<ISchemaGenerateResponse>('POST', `${API_PATHS.ai}/generate-schema`, {
+      operation: 'api.schema.generate',
+      body: payload,
+    });
+  }
+
+  /** Lista los JSON Schemas generados del tenant activo (paginado). */
+  public async listSchemas(query: IPageQuery = {}): Promise<IPage<IDeveloperSchemaRead>> {
+    const params = new URLSearchParams();
+    if (query.page !== undefined) {
+      params.set('page', String(query.page));
+    }
+    if (query.page_size !== undefined) {
+      params.set('page_size', String(query.page_size));
+    }
+    const queryString = params.toString();
+    const path = `${API_PATHS.ai}/schemas${queryString ? `?${queryString}` : ''}`;
+    return this.request<IPage<IDeveloperSchemaRead>>('GET', path, {
+      operation: 'api.schema.list',
+    });
+  }
+
+  /** Valida un JSON Schema (Draft 2020-12) y, opcionalmente, datos contra él. */
+  public async validateSchema(payload: ISchemaValidateRequest): Promise<ISchemaValidateResponse> {
+    return this.request<ISchemaValidateResponse>('POST', `${API_PATHS.schemas}/validate`, {
+      operation: 'api.schema.validate',
+      body: payload,
+    });
+  }
+
+  /** Lista las versiones de un schema del tenant activo (paginado, descendente). */
+  public async listSchemaVersions(
+    schemaId: string,
+    query: IPageQuery = {},
+  ): Promise<IPage<ISchemaVersionRead>> {
+    const params = new URLSearchParams();
+    if (query.page !== undefined) {
+      params.set('page', String(query.page));
+    }
+    if (query.page_size !== undefined) {
+      params.set('page_size', String(query.page_size));
+    }
+    const queryString = params.toString();
+    const path = `${API_PATHS.schemas}/${schemaId}/versions${queryString ? `?${queryString}` : ''}`;
+    return this.request<IPage<ISchemaVersionRead>>('GET', path, {
+      operation: 'api.schema.version.list',
+    });
+  }
+
+  /** Crea una nueva versión de un schema del tenant activo (instantánea + nota). */
+  public async createSchemaVersion(
+    schemaId: string,
+    payload: ISchemaVersionCreateRequest,
+  ): Promise<ISchemaVersionRead> {
+    return this.request<ISchemaVersionRead>('POST', `${API_PATHS.schemas}/${schemaId}/versions`, {
+      operation: 'api.schema.version.create',
+      body: payload,
+    });
+  }
+
+  /** Crea un checkout directo en la pasarela (workflow `direct_checkout`). */
+  public async createCheckout(payload: ICheckoutRequest): Promise<ICheckoutResponse> {
+    return this.request<ICheckoutResponse>('POST', `${API_PATHS.workflows}/checkout`, {
+      operation: 'api.workflow.checkout.create',
+      body: payload,
+    });
+  }
+
+  /** Confirma manualmente un pago sandbox pendiente (idempotente). */
+  public async confirmCheckout(paymentId: string): Promise<IPaymentRead> {
+    return this.request<IPaymentRead>(
+      'POST',
+      `${API_PATHS.workflows}/checkout/${paymentId}/confirm`,
+      {
+        operation: 'api.workflow.checkout.confirm',
+      },
+    );
+  }
+
+  /** Captura un lead en el tenant activo (workflow `lead_capture`). */
+  public async captureLead(payload: ILeadRequest): Promise<ILeadRead> {
+    return this.request<ILeadRead>('POST', `${API_PATHS.workflows}/lead`, {
+      operation: 'api.workflow.lead.capture',
+      body: payload,
+    });
+  }
+
+  /** Genera una cotización y su PDF (workflow `quote_generator`). */
+  public async generateQuote(payload: IQuoteRequest): Promise<IQuoteResponse> {
+    return this.request<IQuoteResponse>('POST', `${API_PATHS.workflows}/quote`, {
+      operation: 'api.workflow.quote.generate',
+      body: payload,
+    });
+  }
+
+  /** Agenda una cita y genera su ICS (workflow `appointment_scheduler`). */
+  public async scheduleAppointment(payload: IAppointmentRequest): Promise<IAppointmentResponse> {
+    return this.request<IAppointmentResponse>('POST', `${API_PATHS.workflows}/appointment`, {
+      operation: 'api.workflow.appointment.schedule',
+      body: payload,
+    });
+  }
+
+  /** Lista los templates del catálogo del marketplace (opcional por categoría). */
+  public async listMarketplaceTemplates(
+    query: IPageQuery = {},
+    category?: string,
+  ): Promise<IPage<IMarketplaceTemplateRead>> {
+    const params = new URLSearchParams();
+    if (query.page !== undefined) params.set('page', String(query.page));
+    if (query.page_size !== undefined) params.set('page_size', String(query.page_size));
+    if (category !== undefined && category !== '') params.set('category', category);
+    const queryString = params.toString();
+    const path = `${API_PATHS.marketplace}/templates${queryString ? `?${queryString}` : ''}`;
+    return this.request<IPage<IMarketplaceTemplateRead>>('GET', path, {
+      operation: 'api.marketplace.template.list',
+    });
+  }
+
+  /** Publica un template en el marketplace del tenant activo. */
+  public async createMarketplaceTemplate(
+    payload: IMarketplaceTemplateCreateRequest,
+  ): Promise<IMarketplaceTemplateRead> {
+    return this.request<IMarketplaceTemplateRead>('POST', `${API_PATHS.marketplace}/templates`, {
+      operation: 'api.marketplace.template.create',
+      body: payload,
+    });
+  }
+
+  /** Importa un template del marketplace a una campaña (genera una landing). */
+  public async importMarketplaceTemplate(
+    templateId: string,
+    payload: IMarketplaceImportRequest,
+  ): Promise<IMarketplaceImportResponse> {
+    return this.request<IMarketplaceImportResponse>(
+      'POST',
+      `${API_PATHS.marketplace}/templates/${templateId}/import`,
+      {
+        operation: 'api.marketplace.template.import',
+        body: payload,
+      },
+    );
+  }
+
+  /** Registra un evento de analítica en el tenant activo. */
+  public async recordAnalyticsEvent(
+    payload: IAnalyticsEventCreateRequest,
+  ): Promise<IAnalyticsEventRead> {
+    return this.request<IAnalyticsEventRead>('POST', `${API_PATHS.analytics}/events`, {
+      operation: 'api.analytics.event.record',
+      body: payload,
+    });
+  }
+
+  /** Obtiene el resumen del dashboard de analítica del tenant activo. */
+  public async getAnalyticsDashboard(): Promise<IAnalyticsDashboardResponse> {
+    return this.request<IAnalyticsDashboardResponse>('GET', `${API_PATHS.analytics}/dashboard`, {
+      operation: 'api.analytics.dashboard.get',
+    });
+  }
+
+  /** Despliega la landing del tenant activo al CDN. */
+  public async deployToCdn(landingId: LandingId): Promise<ICdnDeployResponse> {
+    return this.request<ICdnDeployResponse>('POST', `${API_PATHS.cdn}/deploy/${landingId}`, {
+      operation: 'api.cdn.deploy',
+    });
+  }
+
   /**
    * Ejecuta una petición HTTP tipada con multi-tenancy y manejo de errores.
    *
@@ -215,7 +470,10 @@ export class HttpApiClient implements IApiClient {
 
     let response: Response;
     try {
-      response = await this.fetcher(url, init);
+      // `fetch` nativo exige que `this` sea `Window`; al guardarlo como campo se
+      // pierde el receptor y el navegador lanza "Illegal invocation". Se invoca
+      // con `globalThis` para que el fetch real y los mocks DI funcionen igual.
+      response = await this.fetcher.call(globalThis, url, init);
     } catch (cause) {
       this.logger?.error(operation, { url, method, cause });
       throw new ApiNetworkError(operation, {

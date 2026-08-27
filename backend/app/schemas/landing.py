@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -52,13 +52,15 @@ class LandingCompileRequest(BaseModel):
 
     config: dict[str, Any]
     template_name: str = "default"
+    minify: bool = False
 
 
 class LandingCompileResponse(BaseModel):
-    """Resultado de la compilación (HTML renderizado)."""
+    """Resultado de la compilación (HTML renderizado + métrica de duración)."""
 
     html: str
     compiled_at: datetime
+    duration_ms: float
 
 
 class LandingPublishRequest(BaseModel):
@@ -67,3 +69,30 @@ class LandingPublishRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     published: bool = True
+
+
+WorkflowType = Literal[
+    "direct_checkout", "lead_capture", "quote_generator", "appointment_scheduler"
+]
+
+
+class LandingAiGenerationRequest(BaseModel):
+    """Solicitud de generación IA de una landing (prompt + workflow + voz de marca)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=1, max_length=4000)
+    workflow_type: WorkflowType | None = None
+    brand_voice: dict[str, Any] | None = None
+
+
+class LandingAiGenerationResponse(BaseModel):
+    """Respuesta de generación IA: configuración generada + metadatos (caché/uso)."""
+
+    config: dict[str, Any]
+    model: str
+    cached: bool
+    brand_voice: dict[str, Any] | None = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    generated_at: datetime

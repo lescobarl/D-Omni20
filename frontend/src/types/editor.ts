@@ -60,6 +60,8 @@ export type WorkflowType =
 
 /** Configuración completa de una landing en edición. */
 export interface ILandingConfig {
+  /** Identificador opcional de la landing persistida (UUID; ausente en landings locales). */
+  id?: string;
   /** Identificador de la campaña (snake_case). */
   campaignId: string;
   /** Título de la landing. */
@@ -92,6 +94,8 @@ export interface IEditorState {
   updateBlockConfig(instanceId: string, patch: Record<string, unknown>): void;
   /** Cambia el título de la landing. */
   setLandingTitle(title: string): void;
+  /** Reemplaza la landing completa y limpia la selección (p. ej. al aplicar una generación IA). */
+  setLanding(landing: ILandingConfig): void;
   /** Reinicia el editor al estado por defecto. */
   reset(): void;
 }

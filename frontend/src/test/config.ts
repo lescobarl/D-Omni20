@@ -24,6 +24,9 @@ export function createTestConfig(overrides: Partial<IAppConfig> = {}): IAppConfi
       aiAssistant: false,
       codeEditor: true,
       templateMarketplace: false,
+      developerSchemas: false,
+      analytics: false,
+      cdnDeploy: false,
     },
     ...overrides,
   };

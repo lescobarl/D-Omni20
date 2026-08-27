@@ -75,6 +75,24 @@ const FEATURE_FLAG_DEFINITIONS: readonly IConfigDefinition[] = [
     required: false,
     transform: parseBoolean,
   },
+  {
+    envKey: 'VITE_FEATURE_DEVELOPER_SCHEMAS',
+    field: 'developerSchemas',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_ANALYTICS',
+    field: 'analytics',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_CDN_DEPLOY',
+    field: 'cdnDeploy',
+    required: false,
+    transform: parseBoolean,
+  },
 ];
 
 /** Valores por defecto de los feature flags (fail-closed). */
@@ -83,6 +101,9 @@ const FEATURE_FLAG_DEFAULTS: IFeatureFlags = {
   aiAssistant: false,
   codeEditor: false,
   templateMarketplace: false,
+  developerSchemas: false,
+  analytics: false,
+  cdnDeploy: false,
 };
 
 /** Valida y normaliza el entorno de aplicación. */

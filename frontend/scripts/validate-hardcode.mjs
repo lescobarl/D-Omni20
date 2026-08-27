@@ -58,6 +58,16 @@ const HARDCODE_PATTERNS = [
 ];
 
 /**
+ * URIs de contrato de protocolos/estándares inmutables y versionados.
+ *
+ * No son configuración de entorno: identifican estándares públicos (JSON Schema,
+ * W3C, etc.) cuyo valor es fijo por versión y nunca cambia entre ambientes.
+ * Mantener la lista mínima y exacta (coincidencia completa) para no debilitar
+ * la regla CLAUDE 1 (NO HARDCODE).
+ */
+const PROTOCOL_URI_ALLOWLIST = new Set(['https://json-schema.org/draft/2020-12/schema']);
+
+/**
  * ¿El archivo debe excluirse del análisis de hardcode (tests/fixtures)?
  * @param {string} file - Ruta absoluta del archivo.
  * @returns {boolean} `true` si es un archivo de prueba o fixture.
@@ -83,6 +93,11 @@ export function findHardcoded(filePath, code) {
     while ((match = pattern.regex.exec(clean)) !== null) {
       // Las URL/DSN con interpolación son dinámicas, no valores quemados.
       if (match[0].includes('${')) {
+        if (pattern.regex.lastIndex === match.index) pattern.regex.lastIndex += 1;
+        continue;
+      }
+      // URIs de contrato de protocolos/estándares inmutables no son configuración.
+      if (pattern.id === 'url' && PROTOCOL_URI_ALLOWLIST.has(match[0])) {
         if (pattern.regex.lastIndex === match.index) pattern.regex.lastIndex += 1;
         continue;
       }

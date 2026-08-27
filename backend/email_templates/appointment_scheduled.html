@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Cita agendada</title>
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; color: #1f2937; background: #f9fafb; margin: 0; padding: 24px;">
+  <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e5e7eb;">
+    <h1 style="margin: 0 0 16px; font-size: 22px;">¡Cita agendada{% if customer_name %}, {{ customer_name }}{% endif %}!</h1>
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 15px;">
+      <tr>
+        <td style="padding: 8px 0; color: #6b7280;">Servicio</td>
+        <td style="padding: 8px 0; text-align: right; font-weight: bold;">{{ service }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b7280;">Fecha y hora</td>
+        <td style="padding: 8px 0; text-align: right;">{{ starts_at }}</td>
+      </tr>
+    </table>
+    {% if ics_url %}
+    <p style="font-size: 14px; line-height: 1.6;">
+      Puedes agregar el evento a tu calendario:
+      <a href="{{ ics_url }}" style="color: #2563eb;">Agregar a mi calendario</a>
+    </p>
+    {% endif %}
+    <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">Te esperamos. Si necesitas reprogramar, contáctanos.</p>
+  </div>
+</body>
+</html>

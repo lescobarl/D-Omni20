@@ -1,10 +1,14 @@
 /**
- * Captura evidencia visual (Regla 0.1 del CLAUDE.md) de las Fases 5.1 y 5.2.
+ * Captura evidencia visual (Regla 0.1 del CLAUDE.md) de las Fases 5.1 a 5.4.
  *
  * Contrato:
- * - Abre la aplicación real contra el servidor de desarrollo de Vite (localhost:5173).
+ * - Abre la aplicación real contra el servidor de desarrollo de Vite (localhost:5173)
+ *   y requiere el backend activo en localhost:8000 para la compilación real (Fase 5.4).
  * - Inserta bloques desde la librería (Fase 5.1: canvas dnd-kit) y espera a que Monaco
  *   (Fase 5.2) renderice el código compilado con resaltado de sintaxis Jinja2.
+ * - Captura el panel del asistente IA con un prompt cargado (Fase 5.3).
+ * - Captura la vista previa compilada esperando el texto `Compilado en N ms`, lo que
+ *   certifica que la compilación pasa por el backend real (Fase 5.4).
  * - Guarda las capturas en `docs/evidencia-fase-5-2/` para certificar la verificación.
  *
  * Uso:
@@ -57,7 +61,20 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/editor-completo.png`, fullPage: true });
   await code.screenshot({ path: `${OUT_DIR}/monaco-code-panel.png` });
 
-  console.log(`Evidencia Regla 0.1 capturada en: ${OUT_DIR}`);
+  // Fase 5.3: panel del asistente IA con el prompt cargado en el formulario.
+  await page.getByRole('tab', { name: 'IA', exact: true }).click();
+  await page
+    .getByLabel('Describe la landing que quieres generar')
+    .fill('Landing de venta para una clínica dental con testimonios y formulario de cotización.');
+  await page.waitForTimeout(200);
+  await page.locator('#sidebar-panel-ai').screenshot({ path: `${OUT_DIR}/ai-panel.png` });
+
+  // Fase 5.4: vista previa compilada contra el backend real (espera la duración).
+  await page.getByRole('tab', { name: 'Vista previa' }).click();
+  await page.getByText(/Compilado en \d+ ms/).waitFor({ timeout: 15_000 });
+  await page.locator('#right-panel-preview').screenshot({ path: `${OUT_DIR}/preview-panel.png` });
+
+  console.log(`Evidencia Regla 0.1 (Fases 5.1-5.4) capturada en: ${OUT_DIR}`);
 } finally {
   await browser.close();
 }

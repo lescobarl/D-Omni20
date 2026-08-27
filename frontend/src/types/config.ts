@@ -20,6 +20,12 @@ export interface IFeatureFlags {
   codeEditor: boolean;
   /** Habilita el marketplace de plantillas. */
   templateMarketplace: boolean;
+  /** Habilita el editor de JSON Schemas para desarrolladores. */
+  developerSchemas: boolean;
+  /** Habilita el dashboard de analítica avanzada. */
+  analytics: boolean;
+  /** Habilita el despliegue al CDN desde la vista previa. */
+  cdnDeploy: boolean;
 }
 
 /** Configuración tipada y validada de la aplicación. */

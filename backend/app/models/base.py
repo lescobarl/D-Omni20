@@ -14,16 +14,32 @@ Reglas implementadas:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import Boolean, DateTime, Integer, JSON, Uuid, event
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
+_last_utcnow: datetime | None = None
+
+
 def utcnow() -> datetime:
-    """Timestamp UTC timezone-aware (nunca naive)."""
-    return datetime.now(timezone.utc)
+    """Timestamp UTC timezone-aware (nunca naive), estrictamente monótono.
+
+    En sistemas con reloj de baja resolución (p. ej. Windows, tick ~15.6 ms),
+    ``datetime.now()`` puede devolver el mismo instante en llamadas consecutivas,
+    rompiendo los ordenamientos "más reciente primero" por ``created_at`` (la
+    base SQLite cae entonces al rowid, es decir, orden de inserción). Para
+    preservar el orden de creación dentro del proceso, cuando el reloj no avanza
+    se devuelve el último valor incrementado 1 µs.
+    """
+    global _last_utcnow
+    now = datetime.now(timezone.utc)
+    if _last_utcnow is not None and now <= _last_utcnow:
+        now = _last_utcnow + timedelta(microseconds=1)
+    _last_utcnow = now
+    return now
 
 
 # Tipo JSON portable: ``JSON`` en SQLite, ``JSONB`` en PostgreSQL.

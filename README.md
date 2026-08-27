@@ -10,9 +10,10 @@ Unifica tres herramientas en una sola interfaz: **IA generativa**, **canvas visu
 | Frontend   | React 18 + TypeScript (estricto) + Vite 5    |
 | Estilos    | Tailwind CSS 3 (utility-first, purge)        |
 | Estado     | Zustand (persistencia selectiva)             |
-| Testing    | Vitest + React Testing Library               |
-| Backend    | FastAPI (Python 3.11+) — Fase 2              |
-| Datos      | PostgreSQL + Redis — Fase 2                  |
+| Testing    | Vitest + React Testing Library + Playwright  |
+| Backend    | FastAPI (Python 3.11+) — hexagonal + DI      |
+| Datos      | SQLAlchemy 2.0 (SQLite dev / PostgreSQL prod)|
+| IA         | DeepSeek (configuraciones + JSON Schemas)    |
 
 ## Estructura
 
@@ -53,12 +54,28 @@ Este proyecto cumple estrictamente las reglas definidas en `CLAUDE.md` (raíz de
 no hardcode, inyección de dependencias, JSDoc, UUIDv4, tupla de sincronización, logging de auditoría,
 tests de inmutabilidad y cobertura > 80%.
 
+## Estado del Proyecto
+
+**Toda la hoja de ruta (Fases 1-10) está implementada y validada.**
+
+- **Backend**: 312 tests · **94.55%** coverage (FastAPI hexagonal, DI, RLS, auditoría).
+- **Frontend**: 44 files / 386 tests · coverage **95.33 | 88.12 | 82.75 | 95.33**
+  (statements | branches | functions | lines) · `tsc --noEmit` limpio.
+- **E2E**: Playwright — Chromium + WebKit 20/20 verde (editor, persistencia, rendimiento,
+  workflows); workflows 4/4 en los 3 navegadores.
+
 ## Fases
 
-| Fase | Descripción                          | Estado       |
-|------|--------------------------------------|--------------|
-| 1    | Fundamentos de Ingeniería            | ✅ En curso  |
-| 2    | Arquitectura Backend Adaptada        | ⏳ Pendiente |
-| 3    | Frontend con Reglas Estrictas        | ⏳ Pendiente |
-| 4    | Integración y Validación             | ⏳ Pendiente |
-| 5    | Features Core (drag & drop, IA)      | ⏳ Pendiente |
+| Fase | Descripción                                    | Estado       |
+|------|------------------------------------------------|--------------|
+| 1    | Fundamentos de Ingeniería                      | ✅ Completa  |
+| 2    | Arquitectura Backend Adaptada (hexagonal + DI) | ✅ Completa  |
+| 3    | Frontend con Reglas Estrictas                  | ✅ Completa  |
+| 4    | Integración y Validación                       | ✅ Completa  |
+| 4-B  | Scheduler, CRM, tokens Google, emails Jinja2   | ✅ Completa  |
+| 5    | Features Core (drag & drop, IA)                | ✅ Completa  |
+| 6    | Editor Visual de JSON Schemas                  | ✅ Completa  |
+| 7    | Versionado de Schemas                          | ✅ Completa  |
+| 8    | Marketplace de Templates                       | ✅ Completa  |
+| 9    | Analytics Avanzados                            | ✅ Completa  |
+| 10   | CDN Deployment                                 | ✅ Completa  |

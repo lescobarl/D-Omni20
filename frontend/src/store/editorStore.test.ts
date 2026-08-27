@@ -9,6 +9,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useEditorStore } from '@/store/editorStore';
 import { BLOCK_CATALOG } from '@/core/blockCatalog';
+import type { ILandingConfig } from '@/types/editor';
 
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -169,5 +170,27 @@ describe('editorStore', () => {
 
     expect(useEditorStore.getState().landing.blocks).toBe(before);
     expect(useEditorStore.getState().landing.blocks.map((block) => block.instance_id)).toEqual(ids);
+  });
+
+  it('reemplaza la landing completa con setLanding y limpia la selección', () => {
+    const store = useEditorStore.getState();
+    store.addBlock(BLOCK_CATALOG[0]);
+    const id = useEditorStore.getState().landing.blocks[0].instance_id;
+    store.selectBlock(id);
+
+    const nextLanding: ILandingConfig = {
+      campaignId: 'camp-ia',
+      title: 'Landing generada por IA',
+      workflowType: 'lead_capture',
+      blocks: [],
+    };
+    useEditorStore.getState().setLanding(nextLanding);
+
+    const state = useEditorStore.getState();
+    expect(state.landing).toEqual(nextLanding);
+    expect(state.landing.title).toBe('Landing generada por IA');
+    expect(state.landing.workflowType).toBe('lead_capture');
+    expect(state.landing.blocks).toHaveLength(0);
+    expect(state.selectedBlockId).toBeNull();
   });
 });

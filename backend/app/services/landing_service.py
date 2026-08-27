@@ -11,6 +11,7 @@ Contrato:
 
 from __future__ import annotations
 
+import time
 import uuid
 
 from app.core.errors import ConflictError, InputValidationError, NotFoundError
@@ -25,6 +26,7 @@ from app.schemas.landing import (
     LandingRead,
     LandingUpdate,
 )
+from app.services.compiler_service import minify_html
 from app.services.interfaces import IAuditService, ICompilerService, ILandingService
 
 
@@ -188,20 +190,32 @@ class LandingService(ILandingService):
         tenant_id: uuid.UUID,
         data: LandingCompileRequest,
     ) -> LandingCompileResponse:
+        started = time.perf_counter()
         html = self._compiler.compile(
             config=data.config, template_name=data.template_name
         )
+        if data.minify:
+            html = minify_html(html)
+        duration_ms = round((time.perf_counter() - started) * 1000, 3)
         self._audit.record(
             tenant_id=tenant_id,
             operation="landing.compile",
             entity_type="tenant_landing",
             entity_id=None,
-            details={"template_name": data.template_name},
+            details={
+                "template_name": data.template_name,
+                "duration_ms": duration_ms,
+                "minify": data.minify,
+            },
         )
         self._logger.info(
             "landing.compiled",
             message="Configuración compilada a HTML",
             tenant_id=str(tenant_id),
             template_name=data.template_name,
+            duration_ms=str(duration_ms),
+            minify=str(data.minify),
         )
-        return LandingCompileResponse(html=html, compiled_at=utcnow())
+        return LandingCompileResponse(
+            html=html, compiled_at=utcnow(), duration_ms=duration_ms
+        )
