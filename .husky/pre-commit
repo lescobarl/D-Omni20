@@ -3,4 +3,6 @@
 # husky v9 ejecuta los hooks desde la raíz del repo; aquí nos movemos a frontend/
 cd "$(dirname "$0")/../frontend" || exit 1
 npx lint-staged
+# Puerta de tipos por iteración (constraint #3): falla rápido antes de la suite completa.
+npm run typecheck
 npm run test:full
