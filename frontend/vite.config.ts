@@ -8,8 +8,41 @@ import react from '@vitejs/plugin-react';
  * Contrato:
  * - Resuelve el alias `@/*` hacia `src/*`.
  * - Configura el servidor de desarrollo en el puerto 5173.
- * - Configura Vitest con entorno jsdom, globals habilitados y cobertura > 80%.
+ * - Configura Vitest con cobertura > 80% y dos proyectos por entorno:
+ *   - `jsdom`: tests de componentes React, stores y lógica con dependencia de DOM.
+ *   - `node`: tests de lógica pura (core, lib, services, api, monaco, etc.) que
+ *     no necesitan DOM. Corren más rápido y sin cargar jest-dom/axe.
+ *
+ * Regla #14 (aceleración): separar el setup por entorno. Cada proyecto declara su
+ * propio `setupFiles` y su propio `include`/`exclude` para que los archivos sean
+ * disjuntos (ningún test se ejecuta dos veces).
+ *
+ * NOTA: el `include` NO se define a nivel raíz. Con `test.projects`, cada proyecto
+ * hereda la config raíz vía `extends: true` y Vite concatena los arrays de `include`
+ * (mergeConfig). Si la raíz declarara un `include` amplio, se fusionaría con el de
+ * cada proyecto y el proyecto `node` acabaría ejecutando también los tests de React.
  */
+
+// Archivos de lógica pura migrados al entorno `node` (sin DOM, sin React).
+// Si un test nuevo es de lógica pura, añádelo aquí y exclúyelo del proyecto jsdom.
+const NODE_TEST_FILES = [
+  'src/core/utm.test.ts',
+  'src/core/aiConfig.test.ts',
+  'src/core/blocks.test.ts',
+  'src/core/landingCode.test.ts',
+  'src/core/workflows.test.ts',
+  'src/lib/config.test.ts',
+  'src/lib/logger.test.ts',
+  'src/lib/rbac.test.ts',
+  'src/monaco/jinja2.test.ts',
+  'src/api/client.test.ts',
+  'src/test/protocolGuard.test.ts',
+  'src/components/Crm/crmFormat.test.ts',
+  'src/components/Editor/dnd/dragData.test.ts',
+  'src/components/Editor/VisualSchema/schemaTree.test.ts',
+  'src/services/*.test.ts',
+];
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -26,11 +59,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
     css: true,
-    // Los tests E2E (Playwright) viven en `e2e/` y no deben ejecutarse aquí.
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
@@ -50,5 +79,28 @@ export default defineConfig({
         statements: 80,
       },
     },
+    // Dos proyectos disjuntos: jsdom (DOM/React) y node (lógica pura).
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          setupFiles: ['./src/test/setup.ts'],
+          // Todos los tests salvo los de lógica pura migrados a `node`.
+          include: ['src/**/*.{test,spec}.{ts,tsx}'],
+          exclude: [...NODE_TEST_FILES],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          setupFiles: ['./src/test/setup.node.ts'],
+          include: [...NODE_TEST_FILES],
+        },
+      },
+    ],
   },
 });
