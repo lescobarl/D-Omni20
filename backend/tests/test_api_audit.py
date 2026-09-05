@@ -5,9 +5,16 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 TENANT_HEADERS: dict[str, str] = {"X-Tenant-Id": "dev-tenant"}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(tenant_admin_token: str) -> None:
+    """Añade el Bearer del tenant-admin a las cabeceras por defecto (RBAC)."""
+    TENANT_HEADERS["Authorization"] = f"Bearer {tenant_admin_token}"
 
 
 def _create_landing(client: TestClient, name: str = "Landing auditable") -> None:
@@ -51,9 +58,14 @@ def test_audit_log_filter_by_operation(client: TestClient) -> None:
     assert all(item["operation"] == "landing.create" for item in body["items"])
 
 
-def test_audit_log_missing_tenant_returns_403(client: TestClient) -> None:
+def test_audit_log_missing_tenant_returns_403(
+    client: TestClient, tenant_admin_token: str
+) -> None:
     """Sin cabecera X-Tenant-Id el acceso al log se deniega (403)."""
-    response = client.get("/api/v1/audit")
+    response = client.get(
+        "/api/v1/audit",
+        headers={"Authorization": f"Bearer {tenant_admin_token}"},
+    )
     assert response.status_code == 403
     body = response.json()
     assert body["error"]["code"] == "tenant.isolation_violation"

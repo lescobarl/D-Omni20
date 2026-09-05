@@ -8,7 +8,7 @@
  * - La fábrica `createAiService` es el punto de inyección (composition root).
  */
 import type { IApiClient } from '@/api/client';
-import { mapAiConfigToLanding } from '@/core/aiConfig';
+import { mapAiConfigToLanding, mapAiConfigToPortal } from '@/core/aiConfig';
 import type { ILogger } from '@/lib/logger';
 import type { ILandingConfig, WorkflowType } from '@/types/editor';
 
@@ -28,10 +28,30 @@ export interface IAiGenerationResult {
   generatedAt: string;
 }
 
-/** Puerto del servicio de generación IA de landings. */
+/** Resultado normalizado de una generación IA de una página del Portal del Cliente. */
+export interface IPortalGenerationResult {
+  /** Configuración de la página mapeada al dominio del editor. */
+  config: ILandingConfig;
+  /** Slug de la página generada. */
+  slug: string;
+  /** Modelo de IA que generó la respuesta. */
+  model: string;
+  /** Indica si la respuesta provino de la caché del backend. */
+  cached: boolean;
+  /** Tokens de entrada consumidos por la generación. */
+  promptTokens: number;
+  /** Tokens de salida producidos por la generación. */
+  completionTokens: number;
+  /** Marca de tiempo UTC de la generación. */
+  generatedAt: string;
+}
+
+/** Puerto del servicio de generación IA de landings y páginas del portal. */
 export interface IAiService {
   /** Genera una configuración de landing a partir de un prompt y un workflow. */
   generate(prompt: string, workflowType: WorkflowType): Promise<IAiGenerationResult>;
+  /** Genera una configuración de página del Portal del Cliente a partir de un prompt. */
+  generatePortal(prompt: string): Promise<IPortalGenerationResult>;
 }
 
 /** Implementación del puerto IA sobre el cliente HTTP del backend. */
@@ -63,6 +83,32 @@ export class BackendAiService implements IAiService {
     });
     return {
       config,
+      model: response.model,
+      cached: response.cached,
+      promptTokens: response.prompt_tokens,
+      completionTokens: response.completion_tokens,
+      generatedAt: response.generated_at,
+    };
+  }
+
+  /** Genera una configuración de página del Portal del Cliente vía el backend. */
+  public async generatePortal(prompt: string): Promise<IPortalGenerationResult> {
+    this.logger?.debug(BackendAiService.OPERATION, {
+      target: 'portal',
+      promptLength: prompt.length,
+    });
+    const response = await this.apiClient.generatePortalPage({ prompt });
+    const config = mapAiConfigToPortal(response.blocks);
+    this.logger?.info(BackendAiService.OPERATION, {
+      target: 'portal',
+      slug: response.slug,
+      model: response.model,
+      cached: response.cached,
+      blocks: config.blocks.length,
+    });
+    return {
+      config,
+      slug: response.slug,
       model: response.model,
       cached: response.cached,
       promptTokens: response.prompt_tokens,

@@ -10,7 +10,9 @@ from app.api.deps import (
     get_analytics_repository,
     get_audit_service,
     get_current_tenant,
+    require_role,
 )
+from app.models.user import Role, User
 from app.repositories.interfaces import IAnalyticsRepository
 from app.schemas.analytics import (
     AnalyticsDashboardResponse,
@@ -30,6 +32,7 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 )
 def record_event(
     payload: AnalyticsEventCreateRequest,
+    _auth: User = Depends(require_role(Role.ADMIN, Role.OPERADOR)),
     tenant_id: uuid.UUID = Depends(get_current_tenant),
     repository: IAnalyticsRepository = Depends(get_analytics_repository),
     audit: IAuditService = Depends(get_audit_service),
@@ -55,6 +58,7 @@ def record_event(
 
 @router.get("/dashboard", response_model=AnalyticsDashboardResponse)
 def get_dashboard(
+    _auth: User = Depends(require_role(Role.ADMIN, Role.OPERADOR)),
     tenant_id: uuid.UUID = Depends(get_current_tenant),
     repository: IAnalyticsRepository = Depends(get_analytics_repository),
 ) -> AnalyticsDashboardResponse:

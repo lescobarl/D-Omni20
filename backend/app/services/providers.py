@@ -50,6 +50,7 @@ from app.services.workflow_interfaces import (
     ICrmWebhookSender,
     IEmailSender,
     IGoogleCalendarProvider,
+    IMetaGraphMessagesSender,
     IPaymentGateway,
     IQuoteRenderer,
     ISmsSender,
@@ -763,10 +764,13 @@ class WhatsAppCloudSender(IWhatsAppSender):
         timeout_seconds: float = 10.0,
         logger: ILogger,
         client: httpx.Client | None = None,
+        base_url: str | None = None,
     ) -> None:
         self._phone_number_id = phone_number_id
         self._access_token = access_token
         self._webhook_secret = webhook_secret
+        # URL base configurable (mock local para e2e) con respaldo al valor Meta.
+        self._base_url = (base_url or self._BASE_URL).rstrip("/")
         self._timeout = httpx.Timeout(timeout_seconds)
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=self._timeout)
@@ -786,7 +790,7 @@ class WhatsAppCloudSender(IWhatsAppSender):
                 to_phone=to_phone,
             )
             return False
-        url = f"{self._BASE_URL}/{quote(self._phone_number_id)}/messages"
+        url = f"{self._base_url}/{quote(self._phone_number_id)}/messages"
         components = [
             {
                 "type": "body",
@@ -830,6 +834,136 @@ class WhatsAppCloudSender(IWhatsAppSender):
             message="Mensaje de WhatsApp enviado",
             to_phone=to_phone,
             template_name=template_name,
+        )
+        return True
+
+    def send_text(self, *, to_phone: str, text: str) -> bool:
+        if not self._access_token or not self._phone_number_id:
+            self._logger.debug(
+                "workflow.whatsapp.skipped",
+                message="WhatsApp Cloud no configurado; mensaje de texto no enviado",
+                to_phone=to_phone,
+            )
+            return False
+        url = f"{self._base_url}/{quote(self._phone_number_id)}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_phone,
+            "type": "text",
+            "text": {"body": text},
+        }
+        headers = {"Authorization": f"Bearer {self._access_token}"}
+        try:
+            response = self._client.post(url, json=payload, headers=headers)
+        except httpx.HTTPError as exc:
+            self._logger.warning(
+                "workflow.whatsapp.failed",
+                message="Fallo al enviar mensaje de texto por WhatsApp",
+                to_phone=to_phone,
+                cause=str(exc),
+            )
+            return False
+        if response.status_code >= 400:
+            self._logger.warning(
+                "workflow.whatsapp.http_error",
+                message="WhatsApp Cloud respondió con error al enviar texto",
+                to_phone=to_phone,
+                status_code=response.status_code,
+            )
+            return False
+        self._logger.info(
+            "workflow.whatsapp.sent",
+            message="Mensaje de texto de WhatsApp enviado",
+            to_phone=to_phone,
+        )
+        return True
+
+    def verify_webhook_signature(
+        self, *, payload: bytes, signature: str | None
+    ) -> bool:
+        if not self._webhook_secret or not signature:
+            return False
+        expected = "sha256=" + hmac.new(
+            self._webhook_secret.encode("utf-8"),
+            payload,
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(expected, signature)
+
+    def close(self) -> None:
+        if self._owns_client:
+            self._client.close()
+
+
+# ---------------------------------------------------------------------------
+# Graph API de Meta (Instagram/Messenger — Send API ``me/messages``)
+# ---------------------------------------------------------------------------
+
+
+class MetaGraphMessagesSender(IMetaGraphMessagesSender):
+    """Envía mensajes vía la Graph API de Meta (Send API ``me/messages``).
+
+    Messenger y la Instagram Messaging API comparten el endpoint ``me/messages``;
+    solo cambia el ámbito del ``access_token`` (token de página para Messenger,
+    token de cuenta profesional para Instagram). El ``recipient_id`` es el id de
+    ámbito del remitente del webhook (PSID para Messenger, id IG-scoped para
+    Instagram).
+    """
+
+    _BASE_URL = "https://graph.facebook.com/v21.0"
+
+    def __init__(
+        self,
+        *,
+        access_token: str = "",
+        webhook_secret: str = "",
+        timeout_seconds: float = 10.0,
+        logger: ILogger,
+        client: httpx.Client | None = None,
+        base_url: str | None = None,
+    ) -> None:
+        self._access_token = access_token
+        self._webhook_secret = webhook_secret
+        # URL base configurable (mock local para e2e) con respaldo al valor Meta.
+        self._base_url = (base_url or self._BASE_URL).rstrip("/")
+        self._timeout = httpx.Timeout(timeout_seconds)
+        self._owns_client = client is None
+        self._client = client or httpx.Client(timeout=self._timeout)
+        self._logger = logger
+
+    def send_text(self, *, recipient_id: str, text: str) -> bool:
+        if not self._access_token:
+            self._logger.debug(
+                "workflow.metagraph.skipped",
+                message="Meta Graph no configurado; mensaje no enviado",
+                recipient_id=recipient_id,
+            )
+            return False
+        url = f"{self._base_url}/me/messages"
+        payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
+        headers = {"Authorization": f"Bearer {self._access_token}"}
+        try:
+            response = self._client.post(url, json=payload, headers=headers)
+        except httpx.HTTPError as exc:
+            self._logger.warning(
+                "workflow.metagraph.failed",
+                message="Fallo al enviar mensaje por Meta Graph",
+                recipient_id=recipient_id,
+                cause=str(exc),
+            )
+            return False
+        if response.status_code >= 400:
+            self._logger.warning(
+                "workflow.metagraph.http_error",
+                message="Meta Graph respondió con error",
+                recipient_id=recipient_id,
+                status_code=response.status_code,
+            )
+            return False
+        self._logger.info(
+            "workflow.metagraph.sent",
+            message="Mensaje enviado por Meta Graph",
+            recipient_id=recipient_id,
         )
         return True
 

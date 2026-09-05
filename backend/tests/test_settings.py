@@ -15,6 +15,8 @@ def test_settings_accepts_explicit_values() -> None:
         cors_origins=["http://a.example.com", "http://b.example.com"],
         log_level="warning",
         token_encryption_key="0123456789abcdef0123456789abcdef",
+        portal_token_secret="abcdef0123456789abcdef0123456789",
+        jwt_secret="a1b2c3d4e5f60718293a4b5c6d7e8f90",
     )
     assert settings.database_url == "postgresql://usuario:pass@localhost:5432/db"
     assert settings.backend_env == "production"
@@ -22,6 +24,8 @@ def test_settings_accepts_explicit_values() -> None:
     assert settings.log_level == "WARNING"
     assert settings.is_production is True
     assert settings.token_encryption_key == "0123456789abcdef0123456789abcdef"
+    assert settings.portal_token_secret == "abcdef0123456789abcdef0123456789"
+    assert settings.jwt_secret == "a1b2c3d4e5f60718293a4b5c6d7e8f90"
 
 
 def test_settings_production_requires_token_encryption_key() -> None:
@@ -40,10 +44,14 @@ def test_settings_accepts_token_encryption_key_in_production() -> None:
         database_url="postgresql://usuario:pass@localhost:5432/db",
         backend_env="production",
         token_encryption_key="fedcba9876543210fedcba9876543210",
+        portal_token_secret="abcdef0123456789abcdef0123456789",
+        jwt_secret="a1b2c3d4e5f60718293a4b5c6d7e8f90",
         _env_file=None,
     )
     assert settings.is_production is True
     assert settings.token_encryption_key == "fedcba9876543210fedcba9876543210"
+    assert settings.portal_token_secret == "abcdef0123456789abcdef0123456789"
+    assert settings.jwt_secret == "a1b2c3d4e5f60718293a4b5c6d7e8f90"
 
 
 def test_settings_requires_database_url() -> None:
@@ -77,7 +85,9 @@ def test_settings_defaults() -> None:
 
 
 def test_settings_default_cors_origins() -> None:
-    settings = Settings(database_url="sqlite:///x.db")
+    # ``_env_file=None`` aísla la prueba del ``.env`` real (que puede definir
+    # ``CORS_ORIGINS``) para validar el default del modelo.
+    settings = Settings(database_url="sqlite:///x.db", _env_file=None)
     assert settings.cors_origins == ["http://localhost:5173"]
 
 

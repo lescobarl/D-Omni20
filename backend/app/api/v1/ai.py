@@ -11,8 +11,10 @@ from app.api.deps import (
     get_current_tenant,
     get_schema_generation_service,
     get_schema_repository,
+    require_role,
 )
 from app.models.base import utcnow
+from app.models.user import Role
 from app.repositories.interfaces import ISchemaRepository
 from app.schemas.common import Page, Pagination
 from app.schemas.schema import (
@@ -22,7 +24,11 @@ from app.schemas.schema import (
 )
 from app.services.interfaces import IAuditService, ISchemaGenerationService
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(
+    prefix="/ai",
+    tags=["ai"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
 
 
 @router.get("/schemas", response_model=Page[DeveloperSchemaRead])

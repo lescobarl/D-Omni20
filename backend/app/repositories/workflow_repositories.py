@@ -22,11 +22,12 @@ from app.models.workflow import (
     AppointmentReminder,
     AppointmentStatus,
     Lead,
+    LeadStatus,
     PaymentTransaction,
     Quote,
     ReminderStatus,
 )
-from app.repositories.workflow_interfaces import IWorkflowRepository
+from app.repositories.workflow_interfaces import IWorkflowRepository, LeadAttributionItem
 
 
 class SqlAlchemyWorkflowRepository(IWorkflowRepository):
@@ -157,6 +158,20 @@ class SqlAlchemyWorkflowRepository(IWorkflowRepository):
         )
         return self._session.scalars(statement).first()
 
+    def find_lead_by_phone(
+        self, *, tenant_id: uuid.UUID, phone: str
+    ) -> Lead | None:
+        statement = (
+            select(Lead)
+            .where(
+                Lead.tenant_id == tenant_id,
+                Lead.phone == phone,
+                Lead.deleted.is_(False),
+            )
+            .order_by(Lead.created_at.desc())
+        )
+        return self._session.scalars(statement).first()
+
     def list_leads(
         self, *, tenant_id: uuid.UUID, page: int, page_size: int
     ) -> tuple[list[Lead], int]:
@@ -182,6 +197,37 @@ class SqlAlchemyWorkflowRepository(IWorkflowRepository):
         self._apply_fields(lead, fields)
         self._session.flush()
         return lead
+
+    def lead_attribution(self, *, tenant_id: uuid.UUID) -> list[LeadAttributionItem]:
+        """Agrega leads activos del tenant por campaña (``utm_campaign``) y fuente.
+
+        La agregación se hace en Python (no con GROUP BY de SQL) para mantener
+        compatibilidad entre SQLite y PostgreSQL; el volumen de leads por tenant
+        es bajo y la lectura es de solo-consulta.
+        """
+        base = select(Lead).where(
+            Lead.tenant_id == tenant_id, Lead.deleted.is_(False)
+        )
+        rows = list(self._session.scalars(base).all())
+        buckets: dict[tuple[str, str], dict[str, int]] = {}
+        for lead in rows:
+            metadata = lead.metadata_json or {}
+            campaign = str(metadata.get("utm_campaign") or "(sin campaña)")
+            source = lead.source or "landing"
+            bucket = buckets.setdefault((campaign, source), {})
+            status = lead.status or LeadStatus.NEW
+            bucket[status] = bucket.get(status, 0) + 1
+        items = [
+            LeadAttributionItem(
+                campaign=campaign,
+                source=source,
+                total=sum(bucket.values()),
+                by_status=bucket,
+            )
+            for (campaign, source), bucket in buckets.items()
+        ]
+        items.sort(key=lambda item: (-item.total, item.campaign))
+        return items
 
     # ── Cotizaciones ─────────────────────────────────────────────────────────
     def create_quote(
@@ -303,7 +349,7 @@ class SqlAlchemyWorkflowRepository(IWorkflowRepository):
         )
         total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
         ordered = (
-            base.order_by(Appointment.starts_at.desc())
+            base.order_by(Appointment.starts_at.desc(), Appointment.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -322,6 +368,71 @@ class SqlAlchemyWorkflowRepository(IWorkflowRepository):
         self._apply_fields(appointment, fields)
         self._session.flush()
         return appointment
+
+    # ── Portal del cliente (C-3) ──────────────────────────────────────────────
+    # Consultas acotadas por ``tenant_id`` + ``customer_email`` normalizada a
+    # minúsculas en ambos lados. ``func.lower(col) == email.lower()`` es falso
+    # ante ``NULL`` (SQL: ``NULL = 'x'``), así que no filtra ruido de filas sin
+    # correo. La paginación replica la de los métodos ``list_*`` homólogos.
+    def list_payments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[PaymentTransaction], int]:
+        base = select(PaymentTransaction).where(
+            PaymentTransaction.tenant_id == tenant_id,
+            PaymentTransaction.deleted.is_(False),
+            func.lower(PaymentTransaction.customer_email) == email.lower(),
+        )
+        total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        ordered = (
+            base.order_by(PaymentTransaction.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return list(self._session.scalars(ordered).all()), total
+
+    def list_leads_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Lead], int]:
+        base = select(Lead).where(
+            Lead.tenant_id == tenant_id,
+            Lead.deleted.is_(False),
+            func.lower(Lead.email) == email.lower(),
+        )
+        total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        ordered = (
+            base.order_by(Lead.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        )
+        return list(self._session.scalars(ordered).all()), total
+
+    def list_quotes_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Quote], int]:
+        base = select(Quote).where(
+            Quote.tenant_id == tenant_id,
+            Quote.deleted.is_(False),
+            func.lower(Quote.customer_email) == email.lower(),
+        )
+        total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        ordered = (
+            base.order_by(Quote.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        )
+        return list(self._session.scalars(ordered).all()), total
+
+    def list_appointments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Appointment], int]:
+        base = select(Appointment).where(
+            Appointment.tenant_id == tenant_id,
+            Appointment.deleted.is_(False),
+            func.lower(Appointment.customer_email) == email.lower(),
+        )
+        total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        ordered = (
+            base.order_by(Appointment.starts_at.desc(), Appointment.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return list(self._session.scalars(ordered).all()), total
 
     # ── Recordatorios de citas ────────────────────────────────────────────────
     # Excepción documentada al contrato multi-tenant: ``list_upcoming_*`` y

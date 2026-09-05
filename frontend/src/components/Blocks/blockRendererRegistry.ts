@@ -13,6 +13,7 @@ import type { BlockType, IBlockInstance } from '@/types/editor';
 import { CalculatorBlock } from '@/components/Blocks/CalculatorBlock';
 import { FallbackBlock } from '@/components/Blocks/FallbackBlock';
 import { HeroBlock } from '@/components/Blocks/HeroBlock';
+import { PortalBlock } from '@/components/Blocks/PortalBlock';
 import { ServicesGridBlock } from '@/components/Blocks/ServicesGridBlock';
 
 /** Propiedades compartidas por todos los renderizadores de bloques. */
@@ -29,6 +30,7 @@ export const BLOCK_RENDERERS: Readonly<Partial<Record<BlockType, BlockRendererCo
   hero: HeroBlock,
   services_grid: ServicesGridBlock,
   calculator: CalculatorBlock,
+  portal: PortalBlock,
 };
 
 /**

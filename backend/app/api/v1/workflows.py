@@ -23,6 +23,7 @@ from app.schemas.workflow import (
     AppointmentResponse,
     CheckoutRequest,
     CheckoutResponse,
+    LeadAttributionRead,
     LeadRead,
     LeadRequest,
     PaymentRead,
@@ -157,6 +158,15 @@ def list_leads(
     return service.list_leads(
         tenant_id=tenant_id, page=pagination.page, page_size=pagination.page_size
     )
+
+
+@router.get("/leads/attribution", response_model=LeadAttributionRead)
+def get_lead_attribution(
+    tenant_id: uuid.UUID = Depends(get_current_tenant),
+    service: IWorkflowService = Depends(get_workflow_service),
+) -> LeadAttributionRead:
+    """Reporte de atribución por campaña (UTM) del tenant activo."""
+    return service.lead_attribution(tenant_id=tenant_id)
 
 
 @router.get("/leads/{lead_id}", response_model=LeadRead)

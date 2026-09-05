@@ -16,7 +16,7 @@ import { CdnDeploymentPanel } from '@/components/Editor/Preview/CdnDeploymentPan
 import { useCompiledLanding } from '@/hooks/useCompiledLanding';
 import { buildDownloadFileName, downloadHtml } from '@/lib/htmlDownload';
 import { useCompilerStore } from '@/store/compilerStore';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 
 /** Mensaje por defecto cuando el estado de error no incluye detalle. */
 const DEFAULT_COMPILE_ERROR = 'No se pudo compilar la landing.';
@@ -40,7 +40,8 @@ export function PreviewPanel({ cdnDeploy = false }: IPreviewPanelProps): ReactEl
   const { status, html, durationMs, error } = useCompiledLanding();
   const minify = useCompilerStore((state) => state.minify);
   const setMinify = useCompilerStore((state) => state.setMinify);
-  const landingTitle = useEditorStore((state) => state.landing.title);
+  const store = useEditorStoreContext();
+  const landingTitle = store((state) => state.landing.title);
 
   /** Solo se puede descargar cuando existe un resultado compilado. */
   const canDownload = status === 'success' && html !== '';

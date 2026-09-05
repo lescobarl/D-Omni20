@@ -14,6 +14,7 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import type { IQuoteLineInput } from '@/services/workflowService';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { resolveLandingContext, useCurrentLanding } from './landingContext';
 
 /** Monedas ISO 4217 (minúsculas) soportadas por el generador. */
 const CURRENCIES: readonly string[] = ['usd', 'eur', 'mxn', 'cop', 'brl'];
@@ -56,6 +57,7 @@ function formatCurrency(amount: number, currency: string): string {
 export function QuoteGeneratorWorkflow(): ReactElement {
   const quote = useWorkflowStore((state) => state.quote);
   const submitQuote = useWorkflowStore((state) => state.submitQuote);
+  const landing = useCurrentLanding();
 
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -84,12 +86,15 @@ export function QuoteGeneratorWorkflow(): ReactElement {
           line.unitPrice > 0,
       );
     if (customerName.trim() === '' || services.length === 0) return;
+    const landingContext = resolveLandingContext(landing);
     void submitQuote({
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim() || undefined,
       currency,
       services,
       taxRateBps: Number(taxRateBps),
+      landingId: landingContext?.landing_id,
+      campaignId: landingContext?.campaign_id,
     });
   };
 

@@ -14,10 +14,11 @@ export type BlockType =
   | 'testimonials'
   | 'faq'
   | 'lead_form'
-  | 'conversion_floating';
+  | 'conversion_floating'
+  | 'portal';
 
 /** Categorías funcionales de los bloques. */
-export type BlockCategory = 'hero' | 'services' | 'forms' | 'conversion';
+export type BlockCategory = 'hero' | 'services' | 'forms' | 'conversion' | 'portal';
 
 /** Definición estática de un bloque disponible en el catálogo. */
 export interface IBlockDefinition {
@@ -94,6 +95,8 @@ export interface IEditorState {
   updateBlockConfig(instanceId: string, patch: Record<string, unknown>): void;
   /** Cambia el título de la landing. */
   setLandingTitle(title: string): void;
+  /** Cambia el tipo de workflow de conversión de la landing (fuente única de verdad persistida). */
+  setWorkflowType(workflowType: WorkflowType): void;
   /** Reemplaza la landing completa y limpia la selección (p. ej. al aplicar una generación IA). */
   setLanding(landing: ILandingConfig): void;
   /** Reinicia el editor al estado por defecto. */

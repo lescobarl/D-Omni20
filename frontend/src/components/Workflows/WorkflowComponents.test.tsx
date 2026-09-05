@@ -15,14 +15,18 @@ import userEvent from '@testing-library/user-event';
 import type {
   IAppointmentResponse,
   ICheckoutResponse,
+  ILeadAttributionRead,
   ILeadRead,
   IPaymentRead,
   IQuoteResponse,
 } from '@/api/types';
 import type { IWorkflowService } from '@/services/workflowService';
 import { setWorkflowService, useWorkflowStore } from '@/store/workflowStore';
+import { useEditorStore } from '@/store/editorStore';
+import type { ILandingConfig } from '@/types/editor';
 import { AppointmentSchedulerWorkflow } from '@/components/Workflows/AppointmentSchedulerWorkflow';
 import { CheckoutWorkflow } from '@/components/Workflows/CheckoutWorkflow';
+import { LeadAttributionView } from '@/components/Workflows/LeadAttributionView';
 import { LeadCaptureWorkflow } from '@/components/Workflows/LeadCaptureWorkflow';
 import { QuoteGeneratorWorkflow } from '@/components/Workflows/QuoteGeneratorWorkflow';
 
@@ -32,9 +36,22 @@ function makeWorkflowServiceMock(): IWorkflowService {
     createCheckout: vi.fn(),
     confirmCheckout: vi.fn(),
     captureLead: vi.fn(),
+    getLeadAttribution: vi.fn(),
     generateQuote: vi.fn(),
     scheduleAppointment: vi.fn(),
   };
+}
+
+/** Configura la landing del editor global con una campaña (hilo compartido). */
+function setLandingWithCampaign(overrides: Partial<ILandingConfig> = {}): void {
+  useEditorStore.getState().setLanding({
+    id: 'landing-abc',
+    campaignId: 'campaign-verano',
+    title: 'Landing de prueba',
+    workflowType: 'direct_checkout',
+    blocks: [],
+    ...overrides,
+  });
 }
 
 /** Promesa diferida para simular envíos pendientes (estado de carga). */
@@ -102,6 +119,21 @@ function makeLeadRead(overrides: Partial<ILeadRead> = {}): ILeadRead {
   };
 }
 
+/** Fábrica de `ILeadAttributionRead` (DTO exacto del backend). */
+function makeLeadAttributionRead(
+  overrides: Partial<ILeadAttributionRead> = {},
+): ILeadAttributionRead {
+  return {
+    rows: [
+      { campaign: 'c1', source: 'google', total: 1, new: 1, contacted: 0, converted: 0, lost: 0 },
+      { campaign: 'c1', source: 'facebook', total: 1, new: 0, contacted: 0, converted: 1, lost: 0 },
+    ],
+    total_leads: 2,
+    generated_at: '2026-08-18T00:00:00Z',
+    ...overrides,
+  };
+}
+
 /** Fábrica de `IQuoteResponse`. */
 function makeQuoteResponse(overrides: Partial<IQuoteResponse> = {}): IQuoteResponse {
   return {
@@ -138,6 +170,7 @@ describe('CheckoutWorkflow', () => {
     service = makeWorkflowServiceMock();
     setWorkflowService(service);
     useWorkflowStore.getState().reset();
+    useEditorStore.getState().reset();
   });
 
   afterEach(() => {
@@ -198,6 +231,23 @@ describe('CheckoutWorkflow', () => {
     expect(screen.getByRole('button', { name: 'Confirmar pago (sandbox)' })).toBeInTheDocument();
   });
 
+  it('atribuye el checkout a la landing y campaña cuando la landing tiene campaña', async () => {
+    const user = userEvent.setup();
+    service.createCheckout = vi.fn().mockResolvedValue(makeCheckoutResponse());
+    setLandingWithCampaign();
+    render(<CheckoutWorkflow />);
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Crear checkout' }));
+    });
+
+    expect(service.createCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { landing_id: 'landing-abc', campaign_id: 'campaign-verano' },
+      }),
+    );
+  });
+
   it('confirma el pago sandbox y muestra el pago formateado', async () => {
     const user = userEvent.setup();
     service.createCheckout = vi.fn().mockResolvedValue(makeCheckoutResponse());
@@ -253,16 +303,25 @@ describe('LeadCaptureWorkflow', () => {
 
   beforeEach(() => {
     service = makeWorkflowServiceMock();
+    service.getLeadAttribution = vi
+      .fn()
+      .mockResolvedValue(makeLeadAttributionRead({ rows: [], total_leads: 0 }));
     setWorkflowService(service);
     useWorkflowStore.getState().reset();
+    useEditorStore.getState().reset();
   });
 
   afterEach(() => {
+    act(() => {
+      useWorkflowStore.getState().reset();
+    });
     setWorkflowService(null);
+    window.history.pushState({}, '', '/');
   });
 
-  it('renderiza el formulario con los orígenes de captura', () => {
+  it('renderiza el formulario con los orígenes de captura', async () => {
     render(<LeadCaptureWorkflow />);
+    await act(async () => {});
 
     expect(screen.getByRole('heading', { level: 3, name: 'Captura de Leads' })).toBeInTheDocument();
     expect(screen.getByLabelText('Origen')).toHaveValue('landing');
@@ -368,6 +427,88 @@ describe('LeadCaptureWorkflow', () => {
     });
     expect(await screen.findByText(/Lead new · origen landing/)).toBeInTheDocument();
   });
+
+  it('inyecta los parámetros UTM de la URL como metadata y pre-selecciona el origen', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/?utm_source=facebook&utm_campaign=Verano%20Tequesquitengo');
+    service.captureLead = vi.fn().mockResolvedValue(makeLeadRead({ source: 'facebook' }));
+    render(<LeadCaptureWorkflow />);
+
+    expect(screen.getByLabelText('Origen')).toHaveValue('facebook');
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'María García');
+      await user.type(screen.getByLabelText('Correo'), 'maria@ejemplo.com');
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Capturar lead' }));
+    });
+
+    expect(service.captureLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'María García',
+        email: 'maria@ejemplo.com',
+        source: 'facebook',
+        metadata: {
+          utm_source: 'facebook',
+          utm_campaign: 'Verano Tequesquitengo',
+        },
+      }),
+    );
+    expect(await screen.findByText(/Lead new · origen facebook/)).toBeInTheDocument();
+  });
+
+  it('omite metadata cuando la URL no trae UTM', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/');
+    service.captureLead = vi.fn().mockResolvedValue(makeLeadRead());
+    render(<LeadCaptureWorkflow />);
+
+    expect(screen.getByLabelText('Origen')).toHaveValue('landing');
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'María García');
+      await user.type(screen.getByLabelText('Correo'), 'maria@ejemplo.com');
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Capturar lead' }));
+    });
+
+    expect(service.captureLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'landing',
+        metadata: undefined,
+      }),
+    );
+  });
+
+  it('atribuye el lead a la landing y campaña fusionando la metadata UTM', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/?utm_source=facebook&utm_campaign=Verano');
+    service.captureLead = vi.fn().mockResolvedValue(makeLeadRead({ source: 'facebook' }));
+    setLandingWithCampaign();
+    render(<LeadCaptureWorkflow />);
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'María García');
+      await user.type(screen.getByLabelText('Correo'), 'maria@ejemplo.com');
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Capturar lead' }));
+    });
+
+    expect(service.captureLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'facebook',
+        metadata: {
+          utm_source: 'facebook',
+          utm_campaign: 'Verano',
+          landing_id: 'landing-abc',
+          campaign_id: 'campaign-verano',
+        },
+      }),
+    );
+  });
 });
 
 describe('QuoteGeneratorWorkflow', () => {
@@ -377,6 +518,7 @@ describe('QuoteGeneratorWorkflow', () => {
     service = makeWorkflowServiceMock();
     setWorkflowService(service);
     useWorkflowStore.getState().reset();
+    useEditorStore.getState().reset();
   });
 
   afterEach(() => {
@@ -518,6 +660,30 @@ describe('QuoteGeneratorWorkflow', () => {
     });
     expect(await screen.findByText(/Cotización approved · USD/)).toBeInTheDocument();
   });
+
+  it('atribuye la cotización a la landing y campaña cuando la landing tiene campaña', async () => {
+    const user = userEvent.setup();
+    service.generateQuote = vi.fn().mockResolvedValue(makeQuoteResponse());
+    setLandingWithCampaign();
+    render(<QuoteGeneratorWorkflow />);
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('Nombre del cliente'), 'Carlos López');
+      await user.type(screen.getByLabelText('Nombre de la línea 1'), 'Diseño web');
+      await user.type(screen.getByLabelText('Precio unitario de la línea 1'), '100');
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Generar cotización' }));
+    });
+
+    expect(service.generateQuote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerName: 'Carlos López',
+        landingId: 'landing-abc',
+        campaignId: 'campaign-verano',
+      }),
+    );
+  });
 });
 
 describe('AppointmentSchedulerWorkflow', () => {
@@ -527,6 +693,7 @@ describe('AppointmentSchedulerWorkflow', () => {
     service = makeWorkflowServiceMock();
     setWorkflowService(service);
     useWorkflowStore.getState().reset();
+    useEditorStore.getState().reset();
   });
 
   afterEach(() => {
@@ -658,5 +825,117 @@ describe('AppointmentSchedulerWorkflow', () => {
       pending.resolve(makeAppointmentResponse());
     });
     expect(await screen.findByText(/Cita scheduled · America\/Mexico_City/)).toBeInTheDocument();
+  });
+
+  it('atribuye la cita a la landing y campaña cuando la landing tiene campaña', async () => {
+    const user = userEvent.setup();
+    service.scheduleAppointment = vi.fn().mockResolvedValue(makeAppointmentResponse());
+    setLandingWithCampaign();
+    render(<AppointmentSchedulerWorkflow />);
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('Servicio'), 'Consulta inicial');
+      await user.type(screen.getByLabelText('Fecha y hora'), '2026-08-20T15:00');
+      await user.type(screen.getByLabelText('Nombre del cliente'), 'Ana Torres');
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Agendar cita' }));
+    });
+
+    expect(service.scheduleAppointment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        service: 'Consulta inicial',
+        landingId: 'landing-abc',
+        campaignId: 'campaign-verano',
+      }),
+    );
+  });
+});
+
+describe('LeadAttributionView', () => {
+  let service: IWorkflowService;
+
+  beforeEach(() => {
+    service = makeWorkflowServiceMock();
+    service.getLeadAttribution = vi.fn().mockResolvedValue(
+      makeLeadAttributionRead({
+        rows: [
+          {
+            campaign: 'c1',
+            source: 'google',
+            total: 1,
+            new: 1,
+            contacted: 0,
+            converted: 0,
+            lost: 0,
+          },
+          {
+            campaign: 'c1',
+            source: 'facebook',
+            total: 1,
+            new: 0,
+            contacted: 0,
+            converted: 1,
+            lost: 0,
+          },
+        ],
+      }),
+    );
+    setWorkflowService(service);
+    useWorkflowStore.getState().reset();
+  });
+
+  afterEach(() => {
+    act(() => {
+      useWorkflowStore.getState().reset();
+    });
+    setWorkflowService(null);
+  });
+
+  it('carga el reporte y muestra la tabla agrupada por campaña y fuente', async () => {
+    render(<LeadAttributionView />);
+    await act(async () => {});
+
+    expect(service.getLeadAttribution).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Atribución por campaña (UTM)')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Campaña' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Fuente' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: /c1 google 1 1 0 0 0/ })).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: /c1 facebook 1 0 0 1 0/ })).toBeInTheDocument();
+    expect(screen.getByText(/2 leads en total/)).toBeInTheDocument();
+  });
+
+  it('muestra el estado de carga mientras se obtiene el reporte', async () => {
+    const pending = deferred<ILeadAttributionRead>();
+    service.getLeadAttribution = vi.fn().mockReturnValue(pending.promise);
+    render(<LeadAttributionView />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando atribución por campaña…');
+
+    await act(async () => {
+      pending.resolve(makeLeadAttributionRead());
+    });
+    expect(await screen.findByText('Atribución por campaña (UTM)')).toBeInTheDocument();
+  });
+
+  it('muestra el error del servicio de forma accesible', async () => {
+    service.getLeadAttribution = vi.fn().mockRejectedValue(new Error('reporte no disponible'));
+    render(<LeadAttributionView />);
+    await act(async () => {});
+
+    expect(screen.getByRole('alert')).toHaveTextContent('reporte no disponible');
+  });
+
+  it('muestra el estado vacío de forma accesible sin leads atribuidos', async () => {
+    service.getLeadAttribution = vi
+      .fn()
+      .mockResolvedValue(makeLeadAttributionRead({ rows: [], total_leads: 0 }));
+    render(<LeadAttributionView />);
+    await act(async () => {});
+
+    expect(
+      screen.getByText('Aún no hay leads con atribución por campaña para este tenant.'),
+    ).toBeInTheDocument();
   });
 });

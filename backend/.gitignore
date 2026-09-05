@@ -36,3 +36,10 @@ artifacts/
 
 # Datos de tenant locales
 data/
+
+# Artefactos huérfanos / one-off de desarrollo (limpieza seguridad)
+ngrok-escobar.yml
+start_escobar_dev.ps1
+portal_check.html
+login.json
+_dev_server_out.txt

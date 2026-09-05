@@ -13,14 +13,15 @@
  */
 import { type ReactElement } from 'react';
 import { useCdnStore } from '@/store/cdnStore';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 
 /**
  * Panel de despliegue al CDN integrado en la vista previa.
  * @returns La sección con el botón de despliegue y el estado del flujo.
  */
 export function CdnDeploymentPanel(): ReactElement {
-  const landingId = useEditorStore((state) => state.landing.id);
+  const store = useEditorStoreContext();
+  const landingId = store((state) => state.landing.id);
   const deployment = useCdnStore((state) => state.deployment);
   const status = useCdnStore((state) => state.status);
   const error = useCdnStore((state) => state.error);

@@ -44,7 +44,9 @@ omnibotia-studio/
 cd frontend
 npm install
 npm run dev        # Arranca Vite en http://localhost:5173
-npm run test       # Ejecuta tests (Vitest)
+npm run test       # Iteración rápida: solo tests de lo cambiado (--changed)
+npm run test:file <ruta>   # Solo el test de la tarea en curso
+npm run test:full  # Suite completa (cierre de hito y pre-commit)
 npm run build      # Compila en modo producción
 ```
 
@@ -53,6 +55,22 @@ npm run build      # Compila en modo producción
 Este proyecto cumple estrictamente las reglas definidas en `CLAUDE.md` (raíz del workspace):
 no hardcode, inyección de dependencias, JSDoc, UUIDv4, tupla de sincronización, logging de auditoría,
 tests de inmutabilidad y cobertura > 80%.
+
+## Autenticación de Usuario + RBAC (Studio)
+
+El estudio autentica a sus **usuarios** (email + contraseña) con **JWT HS256** (hash bcrypt) y aplica
+**RBAC por tenant** con tres roles — `admin`, `configurador`, `operador` — más el **super-admin de plataforma**
+(`is_super_admin`). Es independiente del OAuth de Google Calendar (clientes) y de la autenticación de portales públicos.
+
+**Endpoints backend** (prefijo `/auth`): `POST /auth/login`, `POST /auth/logout` (stateless, `204`),
+`GET /auth/me`, `GET /auth/me/memberships`, `POST /auth/change-password`. Gestión de plataforma:
+`/users` (CRUD + membresías, super-admin) y `/members` (miembros del tenant activo, `admin`).
+`/tenants` quedó protegido con `require_super_admin`.
+
+**Frontend**: `LoginScreen` + `authStore` (Zustand) gestionan la sesión; `lib/rbac.ts` (`canAccessArea`,
+política *fail-closed*) filtra la navegación por área (`editor`, `ads`, `operations`, `settings`, `hosts`,
+`users`, `profile`). `TenantManager` solo se muestra a super-admin; el área "Usuarios" y la sección "Mi perfil"
+completan la gestión de usuarios y roles.
 
 ## Estado del Proyecto
 
@@ -79,3 +97,4 @@ tests de inmutabilidad y cobertura > 80%.
 | 8    | Marketplace de Templates                       | ✅ Completa  |
 | 9    | Analytics Avanzados                            | ✅ Completa  |
 | 10   | CDN Deployment                                 | ✅ Completa  |
+| RBAC | Autenticación de Usuario + RBAC (Studio)       | ✅ Completa  |

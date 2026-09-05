@@ -15,6 +15,7 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import type { IPaymentRead } from '@/api/types';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { resolveLandingContext, useCurrentLanding } from './landingContext';
 
 /** Monedas ISO 4217 (minúsculas) soportadas por la pasarela. */
 const CURRENCIES: readonly string[] = ['usd', 'eur', 'mxn', 'cop', 'brl'];
@@ -41,6 +42,7 @@ export function CheckoutWorkflow(): ReactElement {
   const checkout = useWorkflowStore((state) => state.checkout);
   const submitCheckout = useWorkflowStore((state) => state.submitCheckout);
   const confirmCheckout = useWorkflowStore((state) => state.confirmCheckout);
+  const landing = useCurrentLanding();
 
   const [amount, setAmount] = useState('100');
   const [currency, setCurrency] = useState('usd');
@@ -57,11 +59,13 @@ export function CheckoutWorkflow(): ReactElement {
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!amountValid) return;
+    const landingContext = resolveLandingContext(landing);
     void submitCheckout({
       amount: amountNumber,
       currency,
       customerEmail: customerEmail.trim() || undefined,
       customerName: customerName.trim() || undefined,
+      metadata: landingContext ?? undefined,
     });
   };
 

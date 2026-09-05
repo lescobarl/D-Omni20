@@ -70,17 +70,57 @@ _EXTENDED_CONFIG_KEYS = frozenset(
     {"brand_voice", "seo_programmatic", "geo_optimization", "metadata_template"}
 )
 
+# Tipos de bloque permitidos en las páginas del Portal del Cliente (C-3). El
+# portal comparte el mismo motor de generación que la landing (UN configurador),
+# pero con bloques orientados a autoservicio del cliente.
+_PORTAL_BLOCK_TYPES = frozenset(
+    {
+        "hero",
+        "services_grid",
+        "testimonials",
+        "faq",
+        "contact_form",
+        "appointment_scheduler",
+        "payment_status",
+        "quote_request",
+        "privacy_policy",
+        "about",
+        "mission_vision",
+    }
+)
 
-def _build_system_prompt(brand_voice: dict[str, Any] | None) -> str:
+_PORTAL_SYSTEM_PROMPT = (
+    "Eres un generador de páginas del Portal del Cliente de alto rendimiento. "
+    "Devuelve SOLO un objeto JSON válido (sin texto, sin markdown) con esta forma: "
+    '{"slug": "inicio", "title": "Título", "blocks": [{"type": "<tipo>", '
+    '"name": "Etiqueta", "config": { ... }}]}. '
+    "Tipos de bloque permitidos: hero, services_grid, testimonials, faq, "
+    "contact_form, appointment_scheduler, payment_status, quote_request, "
+    "privacy_policy, about, mission_vision. El slug debe ser en minúsculas con "
+    "guiones (solo a-z, 0-9 y '-'). Rellena el config de cada bloque con los "
+    "campos que correspondan (títulos, subtítulos, servicios, testimonios, "
+    "preguntas frecuentes, textos CTA...). No inventes tipos de bloque ni campos "
+    "fuera de los permitidos."
+)
+
+
+def _build_system_prompt(
+    brand_voice: dict[str, Any] | None,
+    *,
+    base_prompt: str | None = None,
+) -> str:
     """Parámetriza el prompt de sistema con la voz de marca (Fase A).
 
     Si no hay ``brand_voice`` (o no es un dict con ``tone``/``custom_instructions``)
     devuelve el prompt base sin cambios. Cada voz distinta produce una instrucción
     distinta y, gracias a ``_cache_key``, una clave de caché distinta.
+    ``base_prompt`` permite reutilizar el mismo motor para el Portal del Cliente
+    (UN configurador basado en IA generativa).
     """
+    base = base_prompt or _SYSTEM_PROMPT
     if not isinstance(brand_voice, dict) or not brand_voice:
-        return _SYSTEM_PROMPT
-    instructions: list[str] = [_SYSTEM_PROMPT]
+        return base
+    instructions: list[str] = [base]
     tone = brand_voice.get("tone")
     if isinstance(tone, str) and tone.strip():
         instructions.append(
@@ -260,6 +300,91 @@ class DeepSeekGenerationService(IAiService):
             completion_tokens=completion_tokens,
         )
 
+    def generate_portal(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        prompt: str,
+        brand_voice: dict[str, Any] | None = None,
+    ) -> AiGenerationResult:
+        """Genera la configuración de una página del Portal del Cliente a partir de un prompt.
+
+        Reutiliza el mismo motor de generación que la landing (UN configurador
+        basado en IA generativa), pero produce ``{slug, title, blocks[]}`` en
+        lugar de ``{title, workflowType, blocks[]}``.
+        """
+        api_key = self._settings.deepseek_api_key
+        if not api_key or not api_key.strip():
+            raise ConfigValidationError(
+                "No se configuró DEEPSEEK_API_KEY",
+                operation="ai.generate_portal",
+                context={"reason": "api_key_missing"},
+            )
+
+        cache_key = _cache_key(
+            tenant_id=tenant_id,
+            prompt=prompt,
+            workflow_type="portal",
+            brand_voice=brand_voice,
+        )
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            self._logger.info(
+                "ai.portal_cache_hit",
+                message="Página de portal servida desde caché",
+                tenant_id=str(tenant_id),
+            )
+            return AiGenerationResult(
+                config=cached["config"],
+                model=cached["model"],
+                cached=True,
+                prompt_tokens=cached.get("prompt_tokens", 0),
+                completion_tokens=cached.get("completion_tokens", 0),
+            )
+
+        content, prompt_tokens, completion_tokens = self._call_deepseek(
+            api_key=api_key,
+            prompt=prompt,
+            workflow_type=None,
+            brand_voice=brand_voice,
+            system_prompt=_PORTAL_SYSTEM_PROMPT,
+        )
+        try:
+            parsed = _extract_json(content)
+        except ValueError as exc:
+            raise DependencyError(
+                "La IA devolvió contenido no parseable como JSON",
+                operation="ai.generate_portal",
+                context={"stage": "json"},
+                cause=exc,
+            ) from exc
+        config = _validate_portal_config(parsed)
+
+        model = self._settings.deepseek_model
+        self._cache.set(
+            cache_key,
+            {
+                "config": config,
+                "model": model,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            },
+            ttl_seconds=self._settings.deepseek_cache_ttl_seconds,
+        )
+        self._logger.info(
+            "ai.portal_generated",
+            message="Página de portal generada con IA",
+            tenant_id=str(tenant_id),
+            model=model,
+        )
+        return AiGenerationResult(
+            config=config,
+            model=model,
+            cached=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+
     def _call_deepseek(
         self,
         *,
@@ -267,6 +392,7 @@ class DeepSeekGenerationService(IAiService):
         prompt: str,
         workflow_type: str | None,
         brand_voice: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
     ) -> tuple[str, int, int]:
         """Invoca ``/chat/completions`` y devuelve (contenido, tokens prompt, tokens completados)."""
         workflow_instruction = ""
@@ -275,10 +401,14 @@ class DeepSeekGenerationService(IAiService):
                 f"\nEl workflow objetivo es '{workflow_type}'; adapta los bloques "
                 "y el texto CTA a ese flujo de conversión."
             )
+        base_prompt = system_prompt or _SYSTEM_PROMPT
         payload = {
             "model": self._settings.deepseek_model,
             "messages": [
-                {"role": "system", "content": _build_system_prompt(brand_voice)},
+                {
+                    "role": "system",
+                    "content": _build_system_prompt(brand_voice, base_prompt=base_prompt),
+                },
                 {"role": "user", "content": prompt + workflow_instruction},
             ],
             "temperature": self._settings.deepseek_temperature,
@@ -421,6 +551,59 @@ def _validate_config(raw: Any) -> dict[str, Any]:
     }
     # Whitelist de la extensión PSEO+GEO+Brand Voice (Fase A): solo se propagan
     # los sub-dicts permitidos; cualquier campo inventado por el LLM se descarta.
+    for key in _EXTENDED_CONFIG_KEYS:
+        value = raw.get(key)
+        if isinstance(value, dict):
+            config[key] = value
+    return config
+
+
+def _validate_portal_config(raw: Any) -> dict[str, Any]:
+    """Normaliza la salida del LLM a un dict de configuración de página de portal.
+
+    Descarta bloques con tipos no soportados y garantiza siempre un ``config``
+    dict por bloque (nunca campos inesperados ni estructuras rotas). El slug se
+    normaliza a minúsculas con guiones (solo a-z, 0-9 y '-').
+    """
+    if not isinstance(raw, dict):
+        raise DependencyError(
+            "La IA no devolvió un objeto JSON",
+            operation="ai.generate_portal",
+            context={"reason": "not_object"},
+        )
+
+    title = str(raw.get("title") or "Página del portal").strip() or "Página del portal"
+
+    raw_slug = str(raw.get("slug") or "inicio").strip().lower()
+    slug = re.sub(r"[^a-z0-9-]+", "-", raw_slug).strip("-") or "inicio"
+
+    blocks: list[dict[str, Any]] = []
+    raw_blocks = raw.get("blocks") or []
+    if isinstance(raw_blocks, list):
+        for block in raw_blocks:
+            if not isinstance(block, dict):
+                continue
+            block_type = block.get("type")
+            if not isinstance(block_type, str) or block_type not in _PORTAL_BLOCK_TYPES:
+                continue
+            block_config = block.get("config")
+            if not isinstance(block_config, dict):
+                block_config = {}
+            blocks.append(
+                {
+                    "type": block_type,
+                    "name": str(block.get("name") or block_type),
+                    "config": block_config,
+                }
+            )
+
+    config: dict[str, Any] = {
+        "slug": slug,
+        "title": title,
+        "blocks": blocks,
+    }
+    # Whitelist de la extensión PSEO+GEO+Brand Voice: solo se propagan los
+    # sub-dicts permitidos; cualquier campo inventado por el LLM se descarta.
     for key in _EXTENDED_CONFIG_KEYS:
         value = raw.get(key)
         if isinstance(value, dict):

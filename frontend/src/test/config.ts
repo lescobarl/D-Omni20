@@ -6,6 +6,7 @@
  * - Permite sobrescribir campos concretos vía `overrides`.
  */
 import type { IAppConfig } from '@/types/config';
+import { DEFAULT_THEME } from '@/lib/config';
 
 /**
  * Crea una configuración válida para tests.
@@ -18,7 +19,9 @@ export function createTestConfig(overrides: Partial<IAppConfig> = {}): IAppConfi
     appEnv: 'development',
     apiBaseUrl: 'http://localhost:8000',
     tenantId: 'test-tenant',
+    clientSubdomainBase: 'clientes.omni2.app',
     deepSeekApiKey: '',
+    theme: { ...DEFAULT_THEME },
     features: {
       dragAndDrop: true,
       aiAssistant: false,
@@ -27,6 +30,15 @@ export function createTestConfig(overrides: Partial<IAppConfig> = {}): IAppConfi
       developerSchemas: false,
       analytics: false,
       cdnDeploy: false,
+      appearance: false,
+      bots: false,
+      operations: false,
+      ads: false,
+      crm: false,
+      hosts: false,
+      portal: false,
+      maintenanceRunNow: false,
+      recipientFiles: false,
     },
     ...overrides,
   };

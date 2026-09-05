@@ -10,7 +10,12 @@
  * - `confirmCheckout` conserva el `CheckoutResponse` original en la cola.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IAppointmentResponse, ICheckoutResponse, IPaymentRead } from '@/api/types';
+import type {
+  IAppointmentResponse,
+  ICheckoutResponse,
+  ILeadAttributionRead,
+  IPaymentRead,
+} from '@/api/types';
 import type { IWorkflowService } from '@/services/workflowService';
 import { setWorkflowService, useWorkflowStore } from '@/store/workflowStore';
 
@@ -20,6 +25,7 @@ function makeWorkflowServiceMock(): IWorkflowService {
     createCheckout: vi.fn(),
     confirmCheckout: vi.fn(),
     captureLead: vi.fn(),
+    getLeadAttribution: vi.fn(),
     generateQuote: vi.fn(),
     scheduleAppointment: vi.fn(),
   };
@@ -72,6 +78,21 @@ function makeAppointmentResponse(
   };
 }
 
+/** Fábrica de `ILeadAttributionRead` (DTO exacto del backend). */
+function makeLeadAttributionRead(
+  overrides: Partial<ILeadAttributionRead> = {},
+): ILeadAttributionRead {
+  return {
+    rows: [
+      { campaign: 'c1', source: 'google', total: 1, new: 1, contacted: 0, converted: 0, lost: 0 },
+      { campaign: 'c1', source: 'facebook', total: 1, new: 0, contacted: 1, converted: 0, lost: 0 },
+    ],
+    total_leads: 2,
+    generated_at: '2026-08-18T00:00:00Z',
+    ...overrides,
+  };
+}
+
 describe('workflowStore', () => {
   beforeEach(() => {
     useWorkflowStore.getState().reset();
@@ -98,6 +119,10 @@ describe('workflowStore', () => {
   it('reinicia al workflow por defecto y limpia las colas', () => {
     useWorkflowStore.getState().setWorkflowType('appointment_scheduler');
     useWorkflowStore.setState({ checkout: { status: 'error', result: null, error: 'boom' } });
+    useWorkflowStore.setState({
+      attribution: makeLeadAttributionRead(),
+      attributionStatus: 'success',
+    });
     useWorkflowStore.getState().reset();
 
     expect(useWorkflowStore.getState().workflowType).toBe('direct_checkout');
@@ -106,6 +131,9 @@ describe('workflowStore', () => {
       result: null,
       error: null,
     });
+    expect(useWorkflowStore.getState().attribution).toBeNull();
+    expect(useWorkflowStore.getState().attributionStatus).toBe('idle');
+    expect(useWorkflowStore.getState().attributionError).toBeNull();
   });
 
   it('submitCheckout con servicio inyectado pasa a success y devuelve el resultado', async () => {
@@ -215,5 +243,45 @@ describe('workflowStore', () => {
       result: makeAppointmentResponse(),
       error: null,
     });
+  });
+
+  it('loadAttribution con servicio inyectado pasa a success y devuelve el reporte', async () => {
+    const service = makeWorkflowServiceMock();
+    (service.getLeadAttribution as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeadAttributionRead(),
+    );
+    setWorkflowService(service);
+
+    const result = await useWorkflowStore.getState().loadAttribution();
+
+    expect(service.getLeadAttribution).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(makeLeadAttributionRead());
+    expect(useWorkflowStore.getState().attribution).toEqual(makeLeadAttributionRead());
+    expect(useWorkflowStore.getState().attributionStatus).toBe('success');
+    expect(useWorkflowStore.getState().attributionError).toBeNull();
+  });
+
+  it('loadAttribution con error del servicio pasa a error con el mensaje', async () => {
+    const service = makeWorkflowServiceMock();
+    (service.getLeadAttribution as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('reporte no disponible'),
+    );
+    setWorkflowService(service);
+
+    const result = await useWorkflowStore.getState().loadAttribution();
+
+    expect(result).toBeNull();
+    expect(useWorkflowStore.getState().attributionStatus).toBe('error');
+    expect(useWorkflowStore.getState().attributionError).toBe('reporte no disponible');
+  });
+
+  it('loadAttribution sin servicio registrado pasa a error controlado', async () => {
+    const result = await useWorkflowStore.getState().loadAttribution();
+
+    expect(result).toBeNull();
+    expect(useWorkflowStore.getState().attributionStatus).toBe('error');
+    expect(useWorkflowStore.getState().attributionError).toBe(
+      'El módulo de workflows no está disponible.',
+    );
   });
 });

@@ -96,7 +96,7 @@ form input, form textarea { display: block; width: 100%; margin: .5rem 0; paddin
   {% elif block.type == 'lead_form' %}
     <section>
       <div class="container">
-        <form>
+        <form data-lead-capture>
           {% for field in b.get('fields', []) %}
             <label>{{ field.get('label', '') | e }}
               <input type="{{ field.get('input_type', 'text') | e }}" name="{{ field.get('name', '') | e }}">
@@ -106,6 +106,84 @@ form input, form textarea { display: block; width: 100%; margin: .5rem 0; paddin
         </form>
       </div>
     </section>
+    <script>
+    (function () {
+      var form = document.querySelector('form[data-lead-capture]');
+      var configEl = document.getElementById('omnibotia-config');
+      if (!form || !configEl) { return; }
+      var config = {};
+      try { config = JSON.parse(configEl.textContent || '{}'); } catch (err) { config = {}; }
+      var apiBaseUrl = config.apiBaseUrl || '';
+      var tenantId = config.tenantId || '';
+      if (!apiBaseUrl || !tenantId) {
+        console.warn('[omni-lead] configuración omnibotia ausente; captura desactivada');
+        return;
+      }
+      var params = new URLSearchParams(window.location.search);
+      var metadata = {};
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (key) {
+        var value = params.get(key);
+        if (value) { metadata[key] = value; }
+      });
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var values = { name: '', email: '', phone: '' };
+        form.querySelectorAll('input').forEach(function (input) {
+          if (input.name && Object.prototype.hasOwnProperty.call(values, input.name)) {
+            values[input.name] = input.value;
+          }
+        });
+        var payload = {
+          name: values.name,
+          email: values.email,
+          phone: values.phone || null,
+          source: 'landing',
+          metadata: metadata
+        };
+        fetch(apiBaseUrl + '/api/v1/workflows/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId },
+          body: JSON.stringify(payload)
+        }).then(function (response) {
+          var submit = form.querySelector('button[type="submit"]');
+          if (response.ok) {
+            if (submit) { submit.textContent = '✓ Recibido'; }
+            form.reset();
+          } else {
+            if (submit) { submit.textContent = 'Reintentar'; }
+          }
+        }).catch(function (error) {
+          console.warn('[omni-lead] error al capturar el lead', error);
+        });
+      });
+    })();
+    </script>
+  {% elif block.type == 'portal' %}
+    <section data-omni-portal class="portal">
+      <div class="container">
+        <h2>{{ b.get('title', '') | e }}</h2>
+        <p class="omni-portal-subtitle">{{ b.get('subtitle', '') | e }}</p>
+        <p class="omni-portal-loader">{{ b.get('button_text', '') | e }}</p>
+      </div>
+    </section>
+    <script>
+    (function () {
+      var container = document.querySelector('[data-omni-portal]');
+      var configEl = document.getElementById('omnibotia-config');
+      if (!container || !configEl) { return; }
+      var config = {};
+      try { config = JSON.parse(configEl.textContent || '{}'); } catch (err) { config = {}; }
+      var apiBaseUrl = config.apiBaseUrl || '';
+      if (!apiBaseUrl) {
+        console.warn('[omni-portal] configuración omnibotia ausente; portal desactivado');
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = apiBaseUrl + '/static/portal.js';
+      script.defer = true;
+      container.appendChild(script);
+    })();
+    </script>
   {% elif block.type == 'conversion_floating' %}
     <div class="floating"><a class="cta" href="{{ b.get('cta_url', '#') | e }}">{{ b.get('text', '') | e }}</a></div>
   {% else %}
@@ -265,7 +343,7 @@ form input, form textarea { display: block; width: 100%; margin: .5rem 0; paddin
   {% elif block.type == 'lead_form' %}
     <section>
       <div class="container">
-        <form>
+        <form data-lead-capture>
           {% for field in b.get('fields', []) %}
             <label>{{ field.get('label', '') | safe }}
               <input type="{{ field.get('input_type', 'text') | safe }}" name="{{ field.get('name', '') | safe }}">
@@ -275,6 +353,84 @@ form input, form textarea { display: block; width: 100%; margin: .5rem 0; paddin
         </form>
       </div>
     </section>
+    <script>
+    (function () {
+      var form = document.querySelector('form[data-lead-capture]');
+      var configEl = document.getElementById('omnibotia-config');
+      if (!form || !configEl) { return; }
+      var config = {};
+      try { config = JSON.parse(configEl.textContent || '{}'); } catch (err) { config = {}; }
+      var apiBaseUrl = config.apiBaseUrl || '';
+      var tenantId = config.tenantId || '';
+      if (!apiBaseUrl || !tenantId) {
+        console.warn('[omni-lead] configuración omnibotia ausente; captura desactivada');
+        return;
+      }
+      var params = new URLSearchParams(window.location.search);
+      var metadata = {};
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (key) {
+        var value = params.get(key);
+        if (value) { metadata[key] = value; }
+      });
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var values = { name: '', email: '', phone: '' };
+        form.querySelectorAll('input').forEach(function (input) {
+          if (input.name && Object.prototype.hasOwnProperty.call(values, input.name)) {
+            values[input.name] = input.value;
+          }
+        });
+        var payload = {
+          name: values.name,
+          email: values.email,
+          phone: values.phone || null,
+          source: 'landing',
+          metadata: metadata
+        };
+        fetch(apiBaseUrl + '/api/v1/workflows/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId },
+          body: JSON.stringify(payload)
+        }).then(function (response) {
+          var submit = form.querySelector('button[type="submit"]');
+          if (response.ok) {
+            if (submit) { submit.textContent = '✓ Recibido'; }
+            form.reset();
+          } else {
+            if (submit) { submit.textContent = 'Reintentar'; }
+          }
+        }).catch(function (error) {
+          console.warn('[omni-lead] error al capturar el lead', error);
+        });
+      });
+    })();
+    </script>
+  {% elif block.type == 'portal' %}
+    <section data-omni-portal class="portal">
+      <div class="container">
+        <h2>{{ b.get('title', '') | safe }}</h2>
+        <p class="omni-portal-subtitle">{{ b.get('subtitle', '') | safe }}</p>
+        <p class="omni-portal-loader">{{ b.get('button_text', '') | safe }}</p>
+      </div>
+    </section>
+    <script>
+    (function () {
+      var container = document.querySelector('[data-omni-portal]');
+      var configEl = document.getElementById('omnibotia-config');
+      if (!container || !configEl) { return; }
+      var config = {};
+      try { config = JSON.parse(configEl.textContent || '{}'); } catch (err) { config = {}; }
+      var apiBaseUrl = config.apiBaseUrl || '';
+      if (!apiBaseUrl) {
+        console.warn('[omni-portal] configuración omnibotia ausente; portal desactivado');
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = apiBaseUrl + '/static/portal.js';
+      script.defer = true;
+      container.appendChild(script);
+    })();
+    </script>
   {% elif block.type == 'conversion_floating' %}
     <div class="floating"><a class="cta" href="{{ b.get('cta_url', '#') | safe }}">{{ b.get('text', '') | safe }}</a></div>
   {% else %}

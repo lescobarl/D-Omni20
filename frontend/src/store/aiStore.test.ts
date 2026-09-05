@@ -11,7 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAiService, useAiStore } from '@/store/aiStore';
 import { AppError } from '@/lib/errors';
-import type { IAiGenerationResult, IAiService } from '@/services/aiService';
+import type { IAiGenerationResult, IAiService, IPortalGenerationResult } from '@/services/aiService';
 import type { ILandingConfig } from '@/types/editor';
 
 const DEFAULT_LANDING: ILandingConfig = {
@@ -24,6 +24,21 @@ const DEFAULT_LANDING: ILandingConfig = {
 function makeResult(overrides: Partial<IAiGenerationResult> = {}): IAiGenerationResult {
   return {
     config: DEFAULT_LANDING,
+    model: 'deepseek-chat',
+    cached: false,
+    promptTokens: 10,
+    completionTokens: 120,
+    generatedAt: '2026-08-18T15:00:00Z',
+    ...overrides,
+  };
+}
+
+function makePortalResult(
+  overrides: Partial<IPortalGenerationResult> = {},
+): IPortalGenerationResult {
+  return {
+    config: DEFAULT_LANDING,
+    slug: 'mi-portal',
     model: 'deepseek-chat',
     cached: false,
     promptTokens: 10,
@@ -75,7 +90,7 @@ describe('aiStore', () => {
   it('genera una landing y almacena el resultado', async () => {
     const result = makeResult();
     const generate = vi.fn<IAiService['generate']>().mockResolvedValue(result);
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('  Crea una landing de venta  ');
     await useAiStore.getState().generate();
@@ -94,7 +109,7 @@ describe('aiStore', () => {
     const generate = vi
       .fn<IAiService['generate']>()
       .mockImplementation(() => new Promise<IAiGenerationResult>((res) => (resolve = res)));
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('Prompt pendiente');
     const pending = useAiStore.getState().generate();
@@ -111,7 +126,7 @@ describe('aiStore', () => {
 
   it('usa el workflow seleccionado en la generación', async () => {
     const generate = vi.fn<IAiService['generate']>().mockResolvedValue(makeResult());
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setWorkflowType('appointment_scheduler');
     useAiStore.getState().setPrompt('Agenda citas');
@@ -122,7 +137,7 @@ describe('aiStore', () => {
 
   it('rechaza la generación con prompt vacío sin invocar el servicio', async () => {
     const generate = vi.fn<IAiService['generate']>();
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('   ');
     await useAiStore.getState().generate();
@@ -148,7 +163,7 @@ describe('aiStore', () => {
       .mockRejectedValue(
         new AppError('Fallo de generación', 'ai.generate', { reason: 'model_timeout' }),
       );
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('Genera');
     await useAiStore.getState().generate();
@@ -159,7 +174,7 @@ describe('aiStore', () => {
 
   it('propaga el mensaje de un Error genérico del servicio', async () => {
     const generate = vi.fn<IAiService['generate']>().mockRejectedValue(new Error('Red caída'));
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('Genera');
     await useAiStore.getState().generate();
@@ -170,7 +185,7 @@ describe('aiStore', () => {
 
   it('usa un mensaje por defecto cuando el error no es una instancia de Error', async () => {
     const generate = vi.fn<IAiService['generate']>().mockRejectedValue('fallo desconocido');
-    setAiService({ generate });
+    setAiService({ generate, generatePortal: vi.fn() });
 
     useAiStore.getState().setPrompt('Genera');
     await useAiStore.getState().generate();
@@ -182,6 +197,7 @@ describe('aiStore', () => {
   it('reset descarta el resultado y vuelve al estado inicial', async () => {
     setAiService({
       generate: vi.fn<IAiService['generate']>().mockResolvedValue(makeResult()),
+      generatePortal: vi.fn(),
     });
 
     useAiStore.getState().setPrompt('Genera');
@@ -198,6 +214,79 @@ describe('aiStore', () => {
     expect(state.error).toBeNull();
     // reset conserva la preferencia de workflow del usuario.
     expect(state.workflowType).toBe('lead_capture');
+  });
+
+  it('parte en modo landing por defecto', () => {
+    expect(useAiStore.getState().mode).toBe('landing');
+  });
+
+  it('setMode cambia el modo y descarta el resultado y el error previos', () => {
+    useAiStore.getState().setMode('portal');
+    expect(useAiStore.getState().mode).toBe('portal');
+
+    useAiStore.getState().setMode('landing');
+    expect(useAiStore.getState().mode).toBe('landing');
+    expect(useAiStore.getState().result).toBeNull();
+    expect(useAiStore.getState().error).toBeNull();
+  });
+
+  it('genera una página del portal llamando a generatePortal en modo portal', async () => {
+    const portalResult = makePortalResult();
+    const generatePortal = vi
+      .fn<IAiService['generatePortal']>()
+      .mockResolvedValue(portalResult);
+    setAiService({ generate: vi.fn(), generatePortal });
+
+    useAiStore.getState().setMode('portal');
+    useAiStore.getState().setPrompt('  Crea un portal de servicios  ');
+    await useAiStore.getState().generate();
+
+    expect(generatePortal).toHaveBeenCalledTimes(1);
+    expect(generatePortal).toHaveBeenCalledWith('Crea un portal de servicios');
+
+    const state = useAiStore.getState();
+    expect(state.status).toBe('success');
+    expect(state.result).toEqual(portalResult);
+    expect(state.error).toBeNull();
+  });
+
+  it('en modo portal no invoca generate de landing', async () => {
+    const generate = vi.fn<IAiService['generate']>();
+    const generatePortal = vi
+      .fn<IAiService['generatePortal']>()
+      .mockResolvedValue(makePortalResult());
+    setAiService({ generate, generatePortal });
+
+    useAiStore.getState().setMode('portal');
+    useAiStore.getState().setPrompt('Portal de ejemplo');
+    await useAiStore.getState().generate();
+
+    expect(generate).not.toHaveBeenCalled();
+    expect(generatePortal).toHaveBeenCalledTimes(1);
+  });
+
+  it('en modo portal rechaza la generación con prompt vacío sin invocar el servicio', async () => {
+    const generatePortal = vi.fn<IAiService['generatePortal']>();
+    setAiService({ generate: vi.fn(), generatePortal });
+
+    useAiStore.getState().setMode('portal');
+    useAiStore.getState().setPrompt('   ');
+    await useAiStore.getState().generate();
+
+    expect(generatePortal).not.toHaveBeenCalled();
+    expect(useAiStore.getState().status).toBe('error');
+    expect(useAiStore.getState().error).toBe('Escribe un prompt antes de generar.');
+  });
+
+  it('en modo portal degrada a error cuando no hay servicio registrado', async () => {
+    setAiService(null);
+
+    useAiStore.getState().setMode('portal');
+    useAiStore.getState().setPrompt('Portal sin servicio');
+    await useAiStore.getState().generate();
+
+    expect(useAiStore.getState().status).toBe('error');
+    expect(useAiStore.getState().error).toBe('El asistente IA no está disponible.');
   });
 });
 

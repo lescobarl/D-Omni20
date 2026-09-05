@@ -94,3 +94,19 @@ export function mapAiConfigToLanding(raw: unknown): ILandingConfig {
 
   return { campaignId: '', title, workflowType, blocks };
 }
+
+/**
+ * Convierte la configuración de una página del Portal del Cliente generada por IA
+ * en una `ILandingConfig` del editor.
+ *
+ * El endpoint `POST /portal-pages/generate` devuelve `blocks` con la forma
+ * `{ title, blocks: [...] }` (el dict de configuración completo de la página),
+ * por lo que el mapeo reutiliza la misma normalización que una landing.
+ *
+ * @param raw Configuración cruda de la página devuelta por el backend.
+ * @returns Configuración de página válida para el editor (mismo dominio que una landing).
+ * @throws {AppError} Si `raw` no es un objeto (respuesta inválida del backend).
+ */
+export function mapAiConfigToPortal(raw: unknown): ILandingConfig {
+  return mapAiConfigToLanding(raw);
+}

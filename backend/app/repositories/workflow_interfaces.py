@@ -12,9 +12,20 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from app.models.workflow import Appointment, AppointmentReminder, Lead, PaymentTransaction, Quote
+
+
+@dataclass(frozen=True)
+class LeadAttributionItem:
+    """Fila agregada de atribución por campaña (``utm_campaign``) y fuente."""
+
+    campaign: str
+    source: str
+    total: int
+    by_status: dict[str, int]
 
 
 class IWorkflowRepository(ABC):
@@ -75,6 +86,18 @@ class IWorkflowRepository(ABC):
     def get_lead(self, *, tenant_id: uuid.UUID, lead_id: uuid.UUID) -> Lead | None: ...
 
     @abstractmethod
+    def find_lead_by_phone(
+        self, *, tenant_id: uuid.UUID, phone: str
+    ) -> Lead | None:
+        """Devuelve el lead más reciente del tenant con ese teléfono (o ``None``).
+
+        Se usa para heredar la atribución de campaña (``ad_campaign_id``) de un
+        lead capturado en la landing hacia la conversación del bot del mismo
+        contacto (eslabón ① → ③), de modo que el BOT muestre la procedencia.
+        """
+        ...
+
+    @abstractmethod
     def list_leads(
         self, *, tenant_id: uuid.UUID, page: int, page_size: int
     ) -> tuple[list[Lead], int]: ...
@@ -87,6 +110,11 @@ class IWorkflowRepository(ABC):
         lead_id: uuid.UUID,
         fields: dict[str, Any],
     ) -> Lead | None: ...
+
+    @abstractmethod
+    def lead_attribution(
+        self, *, tenant_id: uuid.UUID
+    ) -> list[LeadAttributionItem]: ...
 
     # ── Cotizaciones ─────────────────────────────────────────────────────────
     @abstractmethod
@@ -156,6 +184,29 @@ class IWorkflowRepository(ABC):
         appointment_id: uuid.UUID,
         fields: dict[str, Any],
     ) -> Appointment | None: ...
+
+    # ── Portal del cliente (C-3) ──────────────────────────────────────────────
+    # Consultas acotadas por ``tenant_id`` + ``customer_email`` (identidad del
+    # cliente en el portal privado); siguen filtrando ``deleted=False``.
+    @abstractmethod
+    def list_payments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[PaymentTransaction], int]: ...
+
+    @abstractmethod
+    def list_leads_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Lead], int]: ...
+
+    @abstractmethod
+    def list_quotes_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Quote], int]: ...
+
+    @abstractmethod
+    def list_appointments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> tuple[list[Appointment], int]: ...
 
     # ── Recordatorios de citas ────────────────────────────────────────────────
     # Excepción documentada al contrato multi-tenant: las consultas del

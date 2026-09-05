@@ -47,4 +47,17 @@ export const BLOCK_CATALOG: readonly IBlockDefinition[] = [
       currency: 'MXN',
     },
   },
+  {
+    block_id: 'portal_autoservicio',
+    type: 'portal',
+    name: 'Portal del Cliente',
+    description: 'Autoservicio del cliente: consulta pagos, cotizaciones, citas y ejercicio ARCO.',
+    version: '1.0.0',
+    category: 'portal',
+    default_config: {
+      title: 'Mi portal',
+      subtitle: 'Consulta el estado de tus pagos, cotizaciones y citas.',
+      button_text: 'Entrar a mi portal',
+    },
+  },
 ];

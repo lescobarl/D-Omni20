@@ -6,10 +6,15 @@
  *   captura vía `useWorkflowStore.submitLead` (el servicio se inyecta por DI
  *   en el composition root).
  * - Muestra el resumen del `ILeadRead` (id, estado y origen) en una tarjeta.
+ * - Embebe el reporte de atribución por campaña (`LeadAttributionView`), que
+ *   carga `GET /api/v1/workflows/leads/attribution` al montarse vía store.
  * - El feedback se expone de forma accesible (`role="status"` / `role="alert"`).
  */
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { deriveSourceFromUtm, extractUtmParams } from '@/core/utm';
+import { LeadAttributionView } from './LeadAttributionView';
+import { resolveLandingContext, useCurrentLanding } from './landingContext';
 
 /** Orígenes de captura soportados por el formulario. */
 const LEAD_SOURCES: readonly string[] = ['landing', 'facebook', 'google', 'referral', 'other'];
@@ -27,11 +32,15 @@ const LEAD_SOURCES: readonly string[] = ['landing', 'facebook', 'google', 'refer
 export function LeadCaptureWorkflow(): ReactElement {
   const lead = useWorkflowStore((state) => state.lead);
   const submitLead = useWorkflowStore((state) => state.submitLead);
+  const landing = useCurrentLanding();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [source, setSource] = useState('landing');
+  const [source, setSource] = useState<string>(() => {
+    const utm = extractUtmParams(window.location.search);
+    return deriveSourceFromUtm(utm['utm_source']) ?? 'landing';
+  });
 
   const isSubmitting = lead.status === 'loading';
   const canSubmit = name.trim() !== '' && email.trim() !== '';
@@ -40,11 +49,16 @@ export function LeadCaptureWorkflow(): ReactElement {
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!canSubmit) return;
+    const utm = extractUtmParams(window.location.search);
+    const landingContext = resolveLandingContext(landing);
+    const metadata: Record<string, unknown> = { ...utm };
+    if (landingContext) Object.assign(metadata, landingContext);
     void submitLead({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
       source,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     });
   };
 
@@ -147,6 +161,8 @@ export function LeadCaptureWorkflow(): ReactElement {
           <p className="mt-1 text-xs text-slate-500">ID: {result.id}</p>
         </div>
       )}
+
+      <LeadAttributionView />
     </section>
   );
 }

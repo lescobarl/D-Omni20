@@ -12,7 +12,7 @@ Fase D — tablas ``pseo_batches``, ``pseo_pages`` y ``pseo_hosts`` con RLS.
   ``before_update`` solo corre en dialectos no-PostgreSQL).
 
 Revision ID: a1b2c3d4e5f6
-Revises:
+Revises: 0a1b2c3d4e5f
 Create Date: 2026-08-25
 """
 
@@ -25,7 +25,7 @@ from app.core.rls import RLSManager
 
 # revision identifiers, used by Alembic.
 revision: str = "a1b2c3d4e5f6"
-down_revision: str | None = None
+down_revision: str | None = "0a1b2c3d4e5f"
 branch_labels: str | None = None
 depends_on: str | None = None
 

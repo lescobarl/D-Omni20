@@ -1,17 +1,25 @@
 /**
  * Panel de configuración y ejecución de workflows de conversión.
  *
- * Contrato:
- * - Lee el tipo de workflow seleccionado (`workflowType`) y su selector
- *   (`setWorkflowType`) desde `useWorkflowStore` (delegación de estado al store,
- *   según `src/components/Workflows/README.md`).
+ * Contrato (FASE E - unificación de `workflowType`):
+ * - La fuente única de verdad del tipo de workflow es `landing.workflowType`
+ *   del store del editor (persistido), accedido vía `useEditorStoreContext`.
+ * - Al seleccionar una pestaña se actualiza tanto el store del editor
+ *   (`setWorkflowType` sobre `landing.workflowType`) como `useWorkflowStore`
+ *   (`setWorkflowType`), manteniendo ambos sincronizados sin deriva.
+ * - Un `useEffect` propaga cualquier cambio externo del `workflowType` del
+ *   editor (p. ej. al cargar una landing con otro workflow) hacia
+ *   `useWorkflowStore`, garantizando que el panel y el store de ejecución
+ *   nunca discrepen.
  * - Expone una lista de pestañas accesible ("Tipos de workflow") con los 4
  *   workflows de `WORKFLOW_DEFINITIONS`.
  * - Renderiza el componente del workflow activo dentro de un `role="tabpanel"`.
  */
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { WORKFLOW_DEFINITIONS } from '@/core/workflows';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import { AppointmentSchedulerWorkflow } from './AppointmentSchedulerWorkflow';
 import { CheckoutWorkflow } from './CheckoutWorkflow';
 import { LeadCaptureWorkflow } from './LeadCaptureWorkflow';
@@ -37,8 +45,21 @@ function workflowTabButtonClass(selected: boolean): string {
  * @returns El selector de tipo de workflow y el formulario del workflow activo.
  */
 export function WorkflowPanel(): ReactElement {
-  const workflowType = useWorkflowStore((state) => state.workflowType);
-  const setWorkflowType = useWorkflowStore((state) => state.setWorkflowType);
+  const editorStore = useEditorStoreContext();
+  const workflowType = editorStore((state) => state.landing.workflowType);
+  const setWorkflowType = editorStore((state) => state.setWorkflowType);
+
+  // Mantiene `useWorkflowStore.workflowType` sincronizado con la fuente única de
+  // verdad (`landing.workflowType`) ante cambios externos (p. ej. cargar una
+  // landing con otro workflow o aplicar una generación IA).
+  useEffect(() => {
+    useWorkflowStore.getState().setWorkflowType(workflowType);
+  }, [workflowType]);
+
+  const handleSelect = (next: (typeof WORKFLOW_DEFINITIONS)[number]['type']): void => {
+    setWorkflowType(next);
+    useWorkflowStore.getState().setWorkflowType(next);
+  };
 
   return (
     <div className="p-4">
@@ -53,7 +74,7 @@ export function WorkflowPanel(): ReactElement {
             role="tab"
             aria-selected={workflowType === workflow.type}
             aria-controls="workflow-panel-active"
-            onClick={() => setWorkflowType(workflow.type)}
+            onClick={() => handleSelect(workflow.type)}
             className={workflowTabButtonClass(workflowType === workflow.type)}
           >
             {workflow.name}

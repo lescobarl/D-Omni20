@@ -16,9 +16,33 @@ import uuid
 from typing import Any
 from urllib.parse import urlparse
 
+import pytest
 from fastapi.testclient import TestClient
 
 TENANT_HEADERS: dict[str, str] = {"X-Tenant-Id": "dev-tenant"}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    """Inyecta el Bearer de super-admin en las cabeceras de tenant.
+
+    Los endpoints de captura (``/workflows/lead``, ``/workflows/checkout``) son
+    públicos (solo tenant header), pero los de lectura cruzada
+    (``/operations/contacts``, ``/audit``) exigen RBAC. ``super_admin_token``
+    omite la comprobación de membresía y vale para cualquier tenant (dev o UUID
+    fresco), por lo que sirve para ambos casos.
+    """
+    global _SUPER_ADMIN
+    _SUPER_ADMIN = super_admin_token
+    TENANT_HEADERS["Authorization"] = f"Bearer {super_admin_token}"
+
+
+def _fresh_tenant() -> dict[str, str]:
+    """Cabeceras de un tenant UUID fresco (aisla el test de datos de desarrollo)."""
+    return {"X-Tenant-Id": str(uuid.uuid4()), "Authorization": f"Bearer {_SUPER_ADMIN}"}
+
+
+_SUPER_ADMIN: str = ""
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -331,6 +355,100 @@ def test_get_missing_lead_returns_404(client: TestClient) -> None:
     )
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "resource.not_found"
+
+
+def test_capture_lead_propagates_contact_with_utm_tags(client: TestClient) -> None:
+    """El lead con UTM propaga un contacto al directorio (eslabón ②)."""
+    headers = _fresh_tenant()
+    phone = f"+52 55 9000 {uuid.uuid4().hex[:4]}"
+    created = client.post(
+        "/api/v1/workflows/lead",
+        json=_lead_payload(
+            phone=phone,
+            email=f"prop-{uuid.uuid4().hex[:6]}@example.com",
+            metadata={
+                "utm_campaign": "c1",
+                "utm_source": "google",
+                "utm_medium": "cpc",
+            },
+        ),
+        headers=headers,
+    )
+    assert created.status_code == 201
+    assert created.json()["metadata"]["utm_campaign"] == "c1"
+
+    contacts = client.get(
+        "/api/v1/operations/contacts?page_size=50", headers=headers
+    ).json()
+    matches = [c for c in contacts["items"] if c["phone"] == phone]
+    assert len(matches) == 1
+    contact = matches[0]
+    assert contact["source"] == "landing"
+    assert contact["state"] == "new"
+    assert "utm_source:google" in contact["tags"]
+    assert "utm_campaign:c1" in contact["tags"]
+    assert "utm_medium:cpc" in contact["tags"]
+
+
+def test_capture_lead_merges_utm_tags_on_existing_contact(client: TestClient) -> None:
+    """Un segundo lead con el mismo teléfono fusiona los tags UTM (sin duplicados)."""
+    headers = _fresh_tenant()
+    phone = f"+52 55 9100 {uuid.uuid4().hex[:4]}"
+    for campaign in ("c1", "c2"):
+        response = client.post(
+            "/api/v1/workflows/lead",
+            json=_lead_payload(
+                phone=phone,
+                email=f"merge-{campaign}-{uuid.uuid4().hex[:6]}@example.com",
+                metadata={"utm_campaign": campaign, "utm_source": "google"},
+            ),
+            headers=headers,
+        )
+        assert response.status_code == 201
+
+    contacts = client.get(
+        "/api/v1/operations/contacts?page_size=50", headers=headers
+    ).json()
+    matches = [c for c in contacts["items"] if c["phone"] == phone]
+    assert len(matches) == 1
+    tags = matches[0]["tags"]
+    assert tags.count("utm_source:google") == 1
+    assert "utm_campaign:c1" in tags
+    assert "utm_campaign:c2" in tags
+
+
+def test_lead_attribution_returns_campaign_rows(client: TestClient) -> None:
+    """GET /leads/attribution agrega leads por campaña y fuente del tenant."""
+    headers = _fresh_tenant()
+    for payload in (
+        _lead_payload(
+            phone=f"+52 55 9200 {uuid.uuid4().hex[:4]}",
+            email=f"attr-a-{uuid.uuid4().hex[:6]}@example.com",
+            metadata={"utm_campaign": "c1", "utm_source": "google"},
+        ),
+        _lead_payload(
+            phone=f"+52 55 9201 {uuid.uuid4().hex[:4]}",
+            email=f"attr-b-{uuid.uuid4().hex[:6]}@example.com",
+            source="facebook",
+            metadata={"utm_campaign": "c1", "utm_source": "facebook"},
+        ),
+    ):
+        assert (
+            client.post(
+                "/api/v1/workflows/lead", json=payload, headers=headers
+            ).status_code
+            == 201
+        )
+
+    response = client.get("/api/v1/workflows/leads/attribution", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_leads"] == 2
+    by_campaign = {(row["campaign"], row["source"]): row for row in body["rows"]}
+    assert by_campaign[("c1", "landing")]["total"] == 1
+    assert by_campaign[("c1", "landing")]["new"] == 1
+    assert by_campaign[("c1", "facebook")]["total"] == 1
+    assert by_campaign[("c1", "facebook")]["new"] == 1
 
 
 # ────────────────────────────────────────────────────────────────────────────

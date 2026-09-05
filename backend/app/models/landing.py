@@ -3,6 +3,8 @@
 Campos clave:
 - ``tenant_id``: columna de aislamiento RLS (ver :class:`TenantScopedMixin`).
 - ``campaign_id``: identificador de campaña, único dentro del tenant.
+- ``slug``: URL amigable de la landing, única dentro del tenant (p. ej.
+  ``casa-vista-lago-tequesquitengo``). Se sirve en ``GET /l/{slug}``.
 - ``config``: JSONB del diseño (bloques) del editor.
 - ``compiled_html``: HTML compilado (cache del compilador).
 - ``published`` / ``published_at``: ciclo de vida de publicación.
@@ -31,6 +33,7 @@ class TenantLanding(Base, UUIDPrimaryKeyMixin, TimestampsMixin, SyncTupleMixin, 
     __tablename__ = "tenant_landings"
     __table_args__ = (
         UniqueConstraint("tenant_id", "campaign_id", name="uq_tenant_landing_campaign"),
+        UniqueConstraint("tenant_id", "slug", name="uq_tenant_landing_slug"),
     )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -40,6 +43,7 @@ class TenantLanding(Base, UUIDPrimaryKeyMixin, TimestampsMixin, SyncTupleMixin, 
         index=True,
     )
     campaign_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     config: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False, default=dict)
     compiled_html: Mapped[str | None] = mapped_column(Text, nullable=True)

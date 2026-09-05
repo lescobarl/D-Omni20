@@ -86,13 +86,23 @@ class PseoService(IPseoService):
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def _canonical_url(self, *, tenant_id: uuid.UUID, slug_path: str) -> str:
-        host_row = self._host_repository.get_by_tenant(tenant_id=tenant_id)
-        if host_row is None:
+        # Fail-closed: solo hosts activos y no eliminados participan en el
+        # canonical. Un host ``pending`` (dominio aún sin verificar) no debe
+        # aparecer como URL canónica de las páginas servidas.
+        active_host = next(
+            (
+                h
+                for h in self._host_repository.list_by_tenant(tenant_id=tenant_id)
+                if not h.deleted and h.status == "active"
+            ),
+            None,
+        )
+        if active_host is None:
             return ""
         scheme = urlparse(self._settings.cdn_base_url).scheme or (
             "https" if self._settings.is_production else "http"
         )
-        return f"{scheme}://{host_row.host}/{slug_path}"
+        return f"{scheme}://{active_host.host}/{slug_path}"
 
     def _cdn_origin(self) -> str:
         """Origen (``scheme://netloc``) de ``cdn_base_url`` para servir el embed."""

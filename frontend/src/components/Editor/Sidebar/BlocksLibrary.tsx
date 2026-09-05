@@ -10,7 +10,7 @@
 import type { ReactElement } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { BLOCK_CATALOG } from '@/core/blockCatalog';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import type { IBlockDefinition } from '@/types/editor';
 
 interface ILibraryBlockItemProps {
@@ -56,7 +56,8 @@ function LibraryBlockItem({ definition, onAdd }: ILibraryBlockItemProps): ReactE
  * @returns La lista de bloques arrastrables que inserta en la landing.
  */
 export function BlocksLibrary(): ReactElement {
-  const addBlock = useEditorStore((state) => state.addBlock);
+  const store = useEditorStoreContext();
+  const addBlock = store((state) => state.addBlock);
 
   return (
     <div className="p-4">

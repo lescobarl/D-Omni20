@@ -16,6 +16,16 @@ class LandingCreate(BaseModel):
 
     campaign_id: uuid.UUID
     name: str = Field(min_length=1, max_length=255)
+    slug: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description=(
+            "URL amigable única dentro del tenant (p. ej. 'casa-vista-lago'). "
+            "Si se omite, se genera automáticamente a partir del nombre."
+        ),
+    )
     config: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -35,6 +45,7 @@ class LandingRead(ORMModel):
     id: uuid.UUID
     tenant_id: uuid.UUID
     campaign_id: uuid.UUID
+    slug: str
     name: str
     config: dict[str, Any]
     compiled_html: str | None

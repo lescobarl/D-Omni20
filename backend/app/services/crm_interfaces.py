@@ -12,11 +12,71 @@ orquesta el envío y el reintento con backoff. El contrato de ``send_lead``:
 
 El *emisor* es quien registra el log estructurado (eventos ``crm_*``); los
 adaptadores no loguean nada para evitar duplicidad de trazas.
+
+Además de los adaptadores de salida, este módulo declara el *contrato de
+eventos de orquestación* (:class:`ICrmEventPublisher`) y sus payloads
+(:class:`LeadNeedsHumanEvent`, :class:`PaymentConfirmedEvent`). El editor de
+workflows publica estos eventos y el subsistema CRM los consume para
+auto-crear oportunidades y sugerir cierres — sin importaciones cruzadas
+(regla CLAUDE: DI).
 """
 
+from __future__ import annotations
+
+import uuid
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any
 
 from app.schemas.workflow import LeadRead
+
+
+@dataclass(frozen=True)
+class LeadNeedsHumanEvent:
+    """Un lead requiere atención humana (``needs_human``) → auto-crear Deal+Task.
+
+    Payload desacoplado: transporta solo datos, nunca referencias a servicios.
+    """
+
+    tenant_id: uuid.UUID
+    lead_id: uuid.UUID
+    name: str
+    email: str
+    phone: str | None
+    source: str
+    metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class PaymentConfirmedEvent:
+    """Un pago fue confirmado (``checkout.session.completed``) → sugerir cierre.
+
+    Payload desacoplado: transporta solo datos, nunca referencias a servicios.
+    """
+
+    tenant_id: uuid.UUID
+    payment_id: uuid.UUID
+    customer_email: str | None
+    customer_name: str | None
+    amount_minor: int
+    currency: str
+    metadata: dict[str, Any]
+
+
+class ICrmEventPublisher(ABC):
+    """Puerto de publicación de eventos de orquestación hacia el subsistema CRM.
+
+    El emisor es inyectado por DI (regla CLAUDE: DI) y consumido por el
+    servicio de workflows; las implementaciones delegan en :class:`CrmService`.
+    """
+
+    @abstractmethod
+    def publish_lead_needs_human(self, *, event: LeadNeedsHumanEvent) -> None:
+        """Dispara la auto-creación de la oportunidad + tarea de seguimiento."""
+
+    @abstractmethod
+    def publish_payment_confirmed(self, *, event: PaymentConfirmedEvent) -> None:
+        """Dispara la sugerencia de cierre ``Ganado`` sobre oportunidades abiertas."""
 
 
 class ICrmAdapter(ABC):

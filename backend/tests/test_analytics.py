@@ -26,8 +26,11 @@ def _clean_analytics_events(container) -> None:
     yield
 
 
-def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+def _tenant_headers(tenant_id: uuid.UUID, token: str) -> dict[str, str]:
+    return {
+        "X-Tenant-Id": str(tenant_id),
+        "Authorization": f"Bearer {token}",
+    }
 
 
 def _seed_event(
@@ -54,10 +57,12 @@ def _seed_event(
 
 
 class TestRecordEvent:
-    def test_record_event_returns_201(self, client, tenant_id, db_session):
+    def test_record_event_returns_201(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         response = client.post(
             "/api/v1/analytics/events",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
             json={
                 "event_type": "landing.view",
                 "entity_type": "tenant_landing",
@@ -75,11 +80,11 @@ class TestRecordEvent:
         assert "created_at" in body
 
     def test_record_event_defaults_properties_and_occurred_at(
-        self, client, tenant_id, db_session
+        self, client, tenant_id, db_session, tenant_admin_token
     ):
         response = client.post(
             "/api/v1/analytics/events",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
             json={"event_type": "conversion"},
         )
         assert response.status_code == 201
@@ -87,39 +92,46 @@ class TestRecordEvent:
         assert body["properties"] == {}
         assert "occurred_at" in body
 
-    def test_record_event_rejects_extra_fields(self, client, tenant_id, db_session):
+    def test_record_event_rejects_extra_fields(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         response = client.post(
             "/api/v1/analytics/events",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
             json={"event_type": "conversion", "otro_campo": True},
         )
         assert response.status_code == 422
 
-    def test_record_event_rejects_empty_event_type(self, client, tenant_id, db_session):
+    def test_record_event_rejects_empty_event_type(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         response = client.post(
             "/api/v1/analytics/events",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
             json={"event_type": ""},
         )
         assert response.status_code == 422
 
-    def test_record_event_audits_operation(self, client, tenant_id, db_session):
+    def test_record_event_audits_operation(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         response = client.post(
             "/api/v1/analytics/events",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
             json={"event_type": "landing.view"},
         )
         assert response.status_code == 201
         audit_response = client.get(
             "/api/v1/audit?operation=analytics.event.record&page_size=100",
-            headers=_tenant_headers(tenant_id),
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
         )
         assert audit_response.status_code == 200
         assert audit_response.json()["total"] >= 1
 
-    def test_missing_tenant_header_is_forbidden(self, client):
+    def test_missing_tenant_header_is_forbidden(self, client, tenant_admin_token):
         response = client.post(
             "/api/v1/analytics/events",
+            headers={"Authorization": f"Bearer {tenant_admin_token}"},
             json={"event_type": "landing.view"},
         )
         assert response.status_code == 403
@@ -127,9 +139,12 @@ class TestRecordEvent:
 
 
 class TestDashboard:
-    def test_dashboard_empty_returns_zeros(self, client, tenant_id, db_session):
+    def test_dashboard_empty_returns_zeros(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         response = client.get(
-            "/api/v1/analytics/dashboard", headers=_tenant_headers(tenant_id)
+            "/api/v1/analytics/dashboard",
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
         )
         assert response.status_code == 200
         body = response.json()
@@ -137,13 +152,16 @@ class TestDashboard:
         assert body["by_event_type"] == []
         assert body["recent"] == []
 
-    def test_dashboard_aggregates_by_event_type(self, client, tenant_id, db_session):
+    def test_dashboard_aggregates_by_event_type(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         _seed_event(db_session, tenant_id, event_type="landing.view")
         _seed_event(db_session, tenant_id, event_type="landing.view")
         _seed_event(db_session, tenant_id, event_type="conversion")
 
         response = client.get(
-            "/api/v1/analytics/dashboard", headers=_tenant_headers(tenant_id)
+            "/api/v1/analytics/dashboard",
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
         )
         assert response.status_code == 200
         body = response.json()
@@ -152,7 +170,9 @@ class TestDashboard:
         assert counts["landing.view"] == 2
         assert counts["conversion"] == 1
 
-    def test_dashboard_lists_recent_events_desc(self, client, tenant_id, db_session):
+    def test_dashboard_lists_recent_events_desc(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         now = datetime.now(timezone.utc)
         _seed_event(
             db_session, tenant_id, event_type="primero", occurred_at=now - timedelta(seconds=5)
@@ -162,23 +182,32 @@ class TestDashboard:
         )
 
         response = client.get(
-            "/api/v1/analytics/dashboard", headers=_tenant_headers(tenant_id)
+            "/api/v1/analytics/dashboard",
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
         )
         assert response.status_code == 200
         recent = response.json()["recent"]
         assert [event["event_type"] for event in recent] == ["segundo", "primero"]
 
-    def test_dashboard_isolates_other_tenant(self, client, tenant_id, db_session):
+    def test_dashboard_isolates_other_tenant(
+        self, client, tenant_id, db_session, tenant_admin_token
+    ):
         other_tenant = uuid.uuid4()
         _seed_event(db_session, other_tenant, event_type="ajeno")
 
         response = client.get(
-            "/api/v1/analytics/dashboard", headers=_tenant_headers(tenant_id)
+            "/api/v1/analytics/dashboard",
+            headers=_tenant_headers(tenant_id, tenant_admin_token),
         )
         assert response.status_code == 200
         assert response.json()["total_events"] == 0
 
-    def test_dashboard_missing_tenant_header_is_forbidden(self, client):
-        response = client.get("/api/v1/analytics/dashboard")
+    def test_dashboard_missing_tenant_header_is_forbidden(
+        self, client, tenant_admin_token
+    ):
+        response = client.get(
+            "/api/v1/analytics/dashboard",
+            headers={"Authorization": f"Bearer {tenant_admin_token}"},
+        )
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "tenant.isolation_violation"

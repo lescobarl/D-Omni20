@@ -20,7 +20,10 @@ test.describe('Editor de landings (E2E)', () => {
   test.beforeEach(async ({ context, page }) => {
     // Estado limpio: evita que la persistencia de Zustand contamine los tests.
     await context.addInitScript(() => localStorage.clear());
-    await page.goto('/');
+    // `domcontentloaded` evita flakes de `load`: Monaco y las fuentes retrasan el
+    // evento `load` (visible en Firefox); las aserciones posteriores ya esperan
+    // elementos y absorben la carga asíncrona de Monaco (patrón de bots.spec).
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
   });
 
   test('flujo completo: crea una landing con bloques y la refleja en canvas y código', async ({
@@ -28,7 +31,8 @@ test.describe('Editor de landings (E2E)', () => {
   }) => {
     // Cabecera con la configuración real del entorno de desarrollo.
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('OmniBotIA Studio');
-    await expect(page.getByText('Tenant: dev-tenant')).toBeVisible();
+    // El selector de tenant está visible y preselecciona el tenant activo (dev-tenant).
+    await expect(page.getByRole('combobox', { name: 'Tenant activo' })).toHaveValue('dev-tenant');
 
     // Estado vacío inicial del canvas.
     const main = page.getByRole('main');

@@ -10,15 +10,39 @@ Contrato:
 
 from __future__ import annotations
 
+from app.bot.channels.factory import ChannelSenderFactory
+from app.bot.context_bundle import HttpContextBundleClient, IContextBundleClient
+from app.bot.context_bundle_service import ContextBundleService
+from app.bot.conversation_service import ConversationService
+from app.bot.governance import (
+    BotPrivacyService,
+    IPrivacyService,
+    IQuotaService,
+    TokenQuotaService,
+)
+from app.bot.interfaces import IConversationService
+from app.bot.queue.redis_stream_queue import RedisStreamQueue
+from app.bot.queue.service import BotQueueService
+from app.bot.queue.worker import BotWorkerPool
+from app.bot.repositories import (
+    SqlAlchemyBotConversationRepository,
+    SqlAlchemyBotMessageRepository,
+    SqlAlchemyBotQueueMetaRepository,
+)
 from app.config.settings import Settings, get_settings
 from app.core.database import Database
-from app.core.logging import ILogger, build_logger
 from app.core.encryption import TokenCipher
+from app.core.logging import ILogger, build_logger
 from app.core.rls import RLSManager
 from app.repositories.interfaces import IOAuthTokenStore
 from app.repositories.sqlalchemy_repositories import (
     SqlAlchemyAuditRepository,
+    SqlAlchemyCampaignRecipientRepository,
+    SqlAlchemyCampaignRepository,
+    SqlAlchemyContactRepository,
+    SqlAlchemyKeywordRepository,
     SqlAlchemyOAuthTokenStore,
+    SqlAlchemyRecipientFileRepository,
 )
 from app.repositories.workflow_repositories import SqlAlchemyWorkflowRepository
 from app.services.ai_service import DeepSeekGenerationService, LruAiResponseCache
@@ -26,7 +50,6 @@ from app.services.audit_service import AuditService
 from app.services.crm_adapters import build_crm_adapter
 from app.services.email_template_service import EmailTemplateService
 from app.services.interfaces import IAiResponseCache, IAiService
-from app.services.scheduler_service import IReminderScheduler, SchedulerService
 from app.services.providers import (
     CalendarIcsProvider,
     CrmWebhookSender,
@@ -38,6 +61,9 @@ from app.services.providers import (
     TwilioSmsSender,
     WhatsAppCloudSender,
 )
+from app.services.campaign_service import CampaignDispatcher, ICampaignDispatcher
+from app.services.maintenance_service import IMaintenanceService, MaintenanceService
+from app.services.scheduler_service import IReminderScheduler, SchedulerService
 from app.services.workflow_interfaces import (
     ICalendarProvider,
     ICrmWebhookSender,
@@ -48,6 +74,7 @@ from app.services.workflow_interfaces import (
     ISmsSender,
     IWhatsAppSender,
 )
+from app.services.workflow_service import WorkflowService
 
 
 class Container:
@@ -74,6 +101,18 @@ class Container:
         self._whatsapp_sender: IWhatsAppSender | None = None
         self._google_calendar_provider: IGoogleCalendarProvider | None = None
         self._scheduler: IReminderScheduler | None = None
+        self._campaign_dispatcher: ICampaignDispatcher | None = None
+        self._token_cipher: TokenCipher | None = None
+        self._context_bundle_client: IContextBundleClient | None = None
+        self._context_bundle_service: ContextBundleService | None = None
+        self._queue: RedisStreamQueue | None = None
+        self._bot_queue_service: BotQueueService | None = None
+        self._bot_worker_pool: BotWorkerPool | None = None
+        self._conversation_service: IConversationService | None = None
+        self._channel_sender_factory: ChannelSenderFactory | None = None
+        self._bot_quota_service: IQuotaService | None = None
+        self._bot_privacy_service: IPrivacyService | None = None
+        self._maintenance_service: IMaintenanceService | None = None
 
     @property
     def logger(self) -> ILogger:
@@ -97,9 +136,7 @@ class Container:
     def ai_cache(self) -> IAiResponseCache:
         """Caché de IA app-scoped (LRU con TTL configurable por settings)."""
         if self._ai_cache is None:
-            self._ai_cache = LruAiResponseCache(
-                max_entries=self.settings.ai_cache_max_entries
-            )
+            self._ai_cache = LruAiResponseCache(max_entries=self.settings.ai_cache_max_entries)
         return self._ai_cache
 
     @property
@@ -198,22 +235,194 @@ class Container:
                 access_token=self.settings.whatsapp_access_token,
                 webhook_secret=self.settings.whatsapp_webhook_secret,
                 timeout_seconds=self.settings.whatsapp_timeout_seconds,
+                base_url=self.settings.whatsapp_base_url,
                 logger=self.logger,
             )
         return self._whatsapp_sender
 
     @property
+    def context_bundle_client(self) -> IContextBundleClient:
+        """Cliente m2m del context bundle del bot (resuelve config por canal)."""
+        if self._context_bundle_client is None:
+            self._context_bundle_client = HttpContextBundleClient(
+                base_url=self.settings.omni2_api_base_url,
+                service_credential=self.settings.omni2_service_credential,
+                timeout_seconds=self.settings.bot_context_timeout_seconds,
+                logger=self.logger,
+            )
+        return self._context_bundle_client
+
+    @property
+    def token_cipher(self) -> TokenCipher | None:
+        """Cifrador de secretos del tenant; ``None`` si no hay clave configurada."""
+        if self._token_cipher is None and self.settings.token_encryption_key:
+            self._token_cipher = TokenCipher(self.settings.token_encryption_key)
+        return self._token_cipher
+
+    @property
+    def context_bundle_service(self) -> ContextBundleService:
+        """Servicio que arma el context bundle en contexto de servicio (m2m)."""
+        if self._context_bundle_service is None:
+            self._context_bundle_service = ContextBundleService(
+                database=self.database,
+                cipher=self.token_cipher,
+                logger=self.logger,
+            )
+        return self._context_bundle_service
+
+    @property
+    def channel_sender_factory(self) -> ChannelSenderFactory:
+        """Fábrica tenant-aware de adaptadores/senders de canal (Fase 6.1).
+
+        Resuelve el adaptador del canal por ``channel_id`` y el sender de
+        WhatsApp por tenant desde ``tenant_channels`` (credenciales cifradas
+        en reposo) para el envío multi-WABA sin fallback global.
+        """
+        if self._channel_sender_factory is None:
+            self._channel_sender_factory = ChannelSenderFactory(
+                database=self.database,
+                settings=self.settings,
+                logger=self.logger,
+                cipher=self.token_cipher,
+            )
+        return self._channel_sender_factory
+
+    @property
+    def queue(self) -> RedisStreamQueue:
+        """Cola D3 (Redis Streams) del bot — stream ``bot:queue:{tenant_id}``."""
+        if self._queue is None:
+            self._queue = RedisStreamQueue(settings=self.settings, logger=self.logger)
+        return self._queue
+
+    @property
+    def bot_queue_service(self) -> BotQueueService:
+        """Punto único de entrada del webhook: persiste en BD y encola en Redis.
+
+        Los repositorios se inyectan por factoría para respetar la sesión de la
+        transacción (regla CLAUDE: DI, sin ``new`` dentro del servicio).
+        """
+        if self._bot_queue_service is None:
+            self._bot_queue_service = BotQueueService(
+                database=self.database,
+                queue=self.queue,
+                message_repository_factory=lambda session: SqlAlchemyBotMessageRepository(session),
+                conversation_repository_factory=lambda session: SqlAlchemyBotConversationRepository(session),
+                queue_meta_repository_factory=lambda session: SqlAlchemyBotQueueMetaRepository(session),
+                settings=self.settings,
+                logger=self.logger,
+            )
+        return self._bot_queue_service
+
+    @property
+    def conversation_service(self) -> IConversationService:
+        """Servicio de conversación del bot (Fase 6) — delega en workflows por DI.
+
+        Un solo dueño por transacción: el bot invoca los servicios de workflows
+        existentes (checkout, leads, cotizaciones, citas) vía ``IWorkflowService``.
+        El worker de la cola D3 usa este servicio como procesador (Fase 6.1
+        conecta el adaptador de envío concreto por tenant).
+        """
+        if self._conversation_service is None:
+            self._conversation_service = ConversationService(
+                database=self.database,
+                context_bundle_service=self.context_bundle_service,
+                settings=self.settings,
+                logger=self.logger,
+                conversation_repository_factory=lambda session: SqlAlchemyBotConversationRepository(session),
+                message_repository_factory=lambda session: SqlAlchemyBotMessageRepository(session),
+                keyword_repository_factory=lambda session: SqlAlchemyKeywordRepository(session),
+                audit_service_factory=lambda session: AuditService(
+                    repository=SqlAlchemyAuditRepository(session),
+                    logger=self.logger,
+                ),
+                workflow_service_factory=lambda session: WorkflowService(
+                    repository=SqlAlchemyWorkflowRepository(session),
+                    audit=AuditService(
+                        repository=SqlAlchemyAuditRepository(session),
+                        logger=self.logger,
+                    ),
+                    logger=self.logger,
+                    payment_gateway=self.payment_gateway,
+                    quote_renderer=self.quote_renderer,
+                    calendar_provider=self.calendar_provider,
+                    crm_webhook_sender=self.crm_webhook_sender,
+                    email_sender=self.email_sender,
+                    sms_sender=self.sms_sender,
+                    whatsapp_sender_factory=self.channel_sender_factory,
+                    artifacts_dir=self.settings.workflow_artifacts_dir,
+                ),
+            )
+        return self._conversation_service
+
+    @property
+    def bot_quota_service(self) -> IQuotaService:
+        """Cuota de tokens por tenant (Fase 9b, L1) — reporte agregado + alertas."""
+        if self._bot_quota_service is None:
+            self._bot_quota_service = TokenQuotaService(
+                database=self.database,
+                settings=self.settings,
+                logger=self.logger,
+                message_repository_factory=lambda session: SqlAlchemyBotMessageRepository(
+                    session
+                ),
+            )
+        return self._bot_quota_service
+
+    @property
+    def bot_privacy_service(self) -> IPrivacyService:
+        """Privacidad del bot (Fase 9a, M4 — LFPDPPP): portabilidad/cancelación/retención."""
+        if self._bot_privacy_service is None:
+            self._bot_privacy_service = BotPrivacyService(
+                database=self.database,
+                settings=self.settings,
+                logger=self.logger,
+                conversation_repository_factory=lambda session: SqlAlchemyBotConversationRepository(
+                    session
+                ),
+                message_repository_factory=lambda session: SqlAlchemyBotMessageRepository(
+                    session
+                ),
+            )
+        return self._bot_privacy_service
+
+    @property
+    def maintenance_service(self) -> IMaintenanceService:
+        """Backup/restauración de la configuración de operación del bot (B.9)."""
+        if self._maintenance_service is None:
+            self._maintenance_service = MaintenanceService(
+                database=self.database,
+                logger=self.logger,
+                audit_factory=lambda session: AuditService(
+                    repository=SqlAlchemyAuditRepository(session),
+                    logger=self.logger,
+                ),
+            )
+        return self._maintenance_service
+
+    @property
+    def bot_worker_pool(self) -> BotWorkerPool:
+        """Pool de consumidores de la cola D3 (dormant sin procesador/adaptador)."""
+        if self._bot_worker_pool is None:
+            self._bot_worker_pool = BotWorkerPool(
+                queue=self.queue,
+                service=self.bot_queue_service,
+                processor=self.conversation_service,
+                adapter_factory=self.channel_sender_factory,
+                settings=self.settings,
+                logger=self.logger,
+            )
+        return self._bot_worker_pool
+
+    @property
     def google_calendar_provider(self) -> IGoogleCalendarProvider:
         """Google Calendar (OAuth 2.0 + REST) sobre el proveedor ICS local."""
         if self._google_calendar_provider is None:
-            if self.settings.token_encryption_key:
-                cipher: TokenCipher | None = TokenCipher(self.settings.token_encryption_key)
-                token_store: IOAuthTokenStore | None = SqlAlchemyOAuthTokenStore(
-                    database=self.database, cipher=cipher
-                )
-            else:
-                cipher = None
-                token_store = None
+            cipher: TokenCipher | None = self.token_cipher
+            token_store: IOAuthTokenStore | None = (
+                SqlAlchemyOAuthTokenStore(database=self.database, cipher=cipher)
+                if cipher is not None
+                else None
+            )
             self._google_calendar_provider = GoogleCalendarProvider(
                 client_id=self.settings.google_client_id,
                 client_secret=self.settings.google_client_secret,
@@ -263,12 +472,43 @@ class Container:
             )
         return self._scheduler
 
+    @property
+    def campaign_dispatcher(self) -> ICampaignDispatcher:
+        """Dispatcher de campañas de recompra/postventa/recuperación (C-2)."""
+        if self._campaign_dispatcher is None:
+            self._campaign_dispatcher = CampaignDispatcher(
+                database=self.database,
+                campaign_repository_factory=lambda session: SqlAlchemyCampaignRepository(
+                    session
+                ),
+                contact_repository_factory=lambda session: SqlAlchemyContactRepository(
+                    session
+                ),
+                recipient_repository_factory=lambda session: SqlAlchemyCampaignRecipientRepository(
+                    session
+                ),
+                recipient_file_repository_factory=lambda session: SqlAlchemyRecipientFileRepository(
+                    session
+                ),
+                audit_factory=lambda session: AuditService(
+                    repository=SqlAlchemyAuditRepository(session),
+                    logger=self.logger,
+                ),
+                sender_factory=self.channel_sender_factory,
+                logger=self.logger,
+                poll_interval_seconds=self.settings.campaign_poll_interval_seconds,
+            )
+        return self._campaign_dispatcher
+
     def dispose(self) -> None:
         """Cierra recursos (pool, HTTP de IA/Stripe/CRM/WhatsApp/Twilio/Google)."""
         # Detener primero el scheduler para que el hilo no use emisores cerrados.
         if self._scheduler is not None:
             self._scheduler.stop()
             self._scheduler = None
+        if self._campaign_dispatcher is not None:
+            self._campaign_dispatcher.stop()
+            self._campaign_dispatcher = None
         if self._payment_gateway is not None:
             self._payment_gateway.close()
             self._payment_gateway = None
@@ -290,6 +530,28 @@ class Container:
         if self._ai_service is not None:
             self._ai_service.close()
             self._ai_service = None
+        if self._context_bundle_client is not None:
+            self._context_bundle_client.close()
+            self._context_bundle_client = None
+        # El ContextBundleService abre sus propias sesiones (no cierra recursos
+        # de infraestructura externos), solo se libera la referencia.
+        self._context_bundle_service = None
+        # La fábrica de canales no posee recursos closables (abre sus propias
+        # sesiones y crea senders efímeros por resolución); se libera la ref.
+        self._channel_sender_factory = None
+        # Detener primero el worker para que no use la conexión Redis cerrada.
+        if self._bot_worker_pool is not None:
+            self._bot_worker_pool.stop()
+            self._bot_worker_pool = None
+        if self._queue is not None:
+            self._queue.close()
+            self._queue = None
+        self._bot_queue_service = None
+        # Los servicios de gobernanza no poseen recursos closables (abren sus
+        # propias sesiones); solo se liberan las referencias.
+        self._bot_quota_service = None
+        self._bot_privacy_service = None
+        self._maintenance_service = None
         if self._database is not None:
             self._database.dispose()
 

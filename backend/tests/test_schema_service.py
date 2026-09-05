@@ -37,6 +37,13 @@ from app.services.schema_service import (
 )
 
 TENANT_HEADERS: dict[str, str] = {"X-Tenant-Id": "dev-tenant"}
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    _AUTH["Authorization"] = f"Bearer {super_admin_token}"
+    TENANT_HEADERS["Authorization"] = f"Bearer {super_admin_token}"
 
 _VALID_SCHEMA_CONTENT = (
     '{"$schema": "https://json-schema.org/draft/2020-12/schema", '
@@ -487,8 +494,14 @@ def test_repository_save_get_list_soft_delete(db_session) -> None:
 # ── Endpoint POST /api/v1/ai/generate-schema ──────────────────────────────────
 
 
-def test_generate_schema_missing_tenant_header_returns_403(client: TestClient) -> None:
-    response = client.post("/api/v1/ai/generate-schema", json={"prompt": "Crea un formulario"})
+def test_generate_schema_missing_tenant_header_returns_403(
+    client: TestClient, super_admin_token: str
+) -> None:
+    response = client.post(
+        "/api/v1/ai/generate-schema",
+        headers={"Authorization": f"Bearer {super_admin_token}"},
+        json={"prompt": "Crea un formulario"},
+    )
     assert response.status_code == 403
     body = response.json()
     assert body["error"]["code"] == "tenant.isolation_violation"
@@ -522,9 +535,14 @@ def test_generate_schema_without_api_key_returns_500(client: TestClient) -> None
 # ── Endpoint GET /api/v1/ai/schemas ───────────────────────────────────────────
 
 
-def test_list_schemas_missing_tenant_header_returns_403(client: TestClient) -> None:
+def test_list_schemas_missing_tenant_header_returns_403(
+    client: TestClient, super_admin_token: str
+) -> None:
     """El listado exige el tenant activo (aislamiento multi-tenant)."""
-    response = client.get("/api/v1/ai/schemas")
+    response = client.get(
+        "/api/v1/ai/schemas",
+        headers={"Authorization": f"Bearer {super_admin_token}"},
+    )
     assert response.status_code == 403
     body = response.json()
     assert body["error"]["code"] == "tenant.isolation_violation"

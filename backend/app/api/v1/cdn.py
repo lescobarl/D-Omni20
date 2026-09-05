@@ -6,11 +6,16 @@ import uuid
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import get_cdn_deployment_service, get_current_tenant
+from app.api.deps import get_cdn_deployment_service, get_current_tenant, require_role
+from app.models.user import Role
 from app.schemas.cdn import CdnDeployResponse
 from app.services.interfaces import ICdnDeploymentService
 
-router = APIRouter(prefix="/cdn", tags=["cdn"])
+router = APIRouter(
+    prefix="/cdn",
+    tags=["cdn"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
 
 
 @router.post(

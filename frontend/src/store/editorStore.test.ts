@@ -193,4 +193,28 @@ describe('editorStore', () => {
     expect(state.landing.blocks).toHaveLength(0);
     expect(state.selectedBlockId).toBeNull();
   });
+
+  it('cambia el workflowType de la landing de forma inmutable con setWorkflowType', () => {
+    const before = useEditorStore.getState().landing;
+
+    useEditorStore.getState().setWorkflowType('quote_generator');
+
+    const state = useEditorStore.getState();
+    expect(state.landing.workflowType).toBe('quote_generator');
+    // Inmutabilidad: la landing previa no se muta.
+    expect(before.workflowType).toBe('direct_checkout');
+    expect(state.landing).not.toBe(before);
+  });
+
+  it('persiste el workflowType de la landing en localStorage (sobrevive al recargar)', () => {
+    useEditorStore.getState().setWorkflowType('appointment_scheduler');
+
+    // La persistencia escribe en localStorage bajo la clave del store.
+    const raw = localStorage.getItem('omnibotia-editor');
+    expect(raw).not.toBeNull();
+    const persisted = JSON.parse(raw as string) as { state: { landing: ILandingConfig } };
+    expect(persisted.state.landing.workflowType).toBe('appointment_scheduler');
+    // El estado en memoria coincide con lo persistido.
+    expect(useEditorStore.getState().landing.workflowType).toBe('appointment_scheduler');
+  });
 });

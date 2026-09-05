@@ -119,6 +119,79 @@ def test_compile_lead_form_block() -> None:
     )
     assert "Nombre" in html
     assert "Enviar" in html
+    # Captura de prospectos con atribución UTM (C-1, eslabón ②):
+    assert 'data-lead-capture' in html
+    assert "/api/v1/workflows/lead" in html
+    assert "X-Tenant-Id" in html
+    for utm_key in ("utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"):
+        assert utm_key in html
+    # El script degrada sin romper si el embed config (omnibotia-config) no existe:
+    assert "if (!form || !configEl) { return; }" in html
+
+
+def test_compile_lead_form_pseo_template() -> None:
+    """La plantilla PSEO también compila el formulario con captura de lead y UTM."""
+    config = _pseo_config(
+        blocks=[
+            {
+                "type": "lead_form",
+                "config": {
+                    "fields": [{"label": "Nombre", "name": "nombre", "input_type": "text"}],
+                    "submit_text": "Enviar",
+                },
+            }
+        ]
+    )
+    html = _compile(config, template_name="pseo")
+    assert 'data-lead-capture' in html
+    assert "/api/v1/workflows/lead" in html
+    assert "X-Tenant-Id" in html
+    assert "utm_campaign" in html
+    assert "if (!form || !configEl) { return; }" in html
+
+
+def test_compile_portal_block() -> None:
+    """El bloque ``portal`` (C-3) compila su sección y el cargador del widget."""
+    html = _compile(
+        {
+            "blocks": [
+                {
+                    "type": "portal",
+                    "config": {
+                        "title": "Mi portal",
+                        "subtitle": "Consulta el estado de tus pagos, cotizaciones y citas.",
+                        "button_text": "Entrar a mi portal",
+                    },
+                }
+            ]
+        }
+    )
+    assert 'data-omni-portal' in html
+    assert "Mi portal" in html
+    assert "Entrar a mi portal" in html
+    # El bloque inyecta el cargador del widget del Portal del Cliente:
+    assert "/static/portal.js" in html
+    assert "if (!container || !configEl) { return; }" in html
+
+
+def test_compile_portal_pseo_template() -> None:
+    """La plantilla PSEO también compila el bloque del Portal del Cliente."""
+    config = _pseo_config(
+        blocks=[
+            {
+                "type": "portal",
+                "config": {
+                    "title": "Mi portal",
+                    "subtitle": "Consulta el estado de tus pagos.",
+                    "button_text": "Entrar a mi portal",
+                },
+            }
+        ]
+    )
+    html = _compile(config, template_name="pseo")
+    assert 'data-omni-portal' in html
+    assert "/static/portal.js" in html
+    assert "if (!container || !configEl) { return; }" in html
 
 
 def test_compile_non_dict_raises_input_validation() -> None:

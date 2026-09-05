@@ -97,6 +97,7 @@ class LeadRead(ORMModel):
     name: str
     email: str
     phone: str | None
+    ad_campaign_id: uuid.UUID | None = None
     source: str
     status: str
     metadata: dict[str, Any] = Field(
@@ -222,3 +223,28 @@ class ReminderProcessingResponse(BaseModel):
     reminders_sent: int = 0
     reminders_failed: int = 0
     reminders_skipped: int = 0
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# ATRIBUCIÓN POR CAMPAÑA (UTM) — C-1
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class LeadAttributionRow(BaseModel):
+    """Conteo de leads agrupado por campaña (``utm_campaign``) y fuente."""
+
+    campaign: str
+    source: str
+    total: int
+    new: int = 0
+    contacted: int = 0
+    converted: int = 0
+    lost: int = 0
+
+
+class LeadAttributionRead(BaseModel):
+    """Reporte de atribución por campaña del tenant activo."""
+
+    rows: list[LeadAttributionRow] = Field(default_factory=list)
+    total_leads: int = 0
+    generated_at: datetime

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
@@ -11,8 +13,10 @@ from app.api.deps import (
     get_current_tenant,
     get_landing_repository,
     get_marketplace_repository,
+    require_role,
 )
 from app.core.errors import NotFoundError
+from app.models.user import Role
 from app.repositories.interfaces import ILandingRepository, IMarketplaceRepository
 from app.schemas.common import Page, Pagination
 from app.schemas.marketplace import (
@@ -23,7 +27,22 @@ from app.schemas.marketplace import (
 )
 from app.services.interfaces import IAuditService
 
-router = APIRouter(prefix="/marketplace", tags=["marketplace"])
+router = APIRouter(
+    prefix="/marketplace",
+    tags=["marketplace"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
+
+
+def _slugify(value: str) -> str:
+    """Convierte un nombre en una URL amigable (slug) en minúsculas.
+
+    Normaliza acentos, elimina caracteres no alfanuméricos y une con guiones.
+    """
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+    return slug or "landing"
 
 
 @router.get("/templates", response_model=Page[MarketplaceTemplateRead])
@@ -103,6 +122,7 @@ def import_template(
     """Importa un template del catálogo creando una landing en el tenant.
 
     La landing toma el ``config`` del template y (si no se indica) su nombre.
+    La URL amigable (``slug``) se deriva dinámicamente del nombre de la landing.
     El import incrementa el contador de descargas del template.
     """
     template = repository.get(tenant_id=tenant_id, template_id=template_id)
@@ -111,10 +131,12 @@ def import_template(
             message="Template de marketplace no encontrado para el tenant activo",
             operation="marketplace.template.import",
         )
+    name = payload.name or template.name
     landing = landings.create(
         tenant_id=tenant_id,
         campaign_id=payload.campaign_id,
-        name=payload.name or template.name,
+        slug=_slugify(name),
+        name=name,
         config=template.config,
     )
     repository.increment_downloads(tenant_id=tenant_id, template_id=template_id)

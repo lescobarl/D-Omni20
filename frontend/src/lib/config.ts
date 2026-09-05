@@ -7,7 +7,13 @@
  * - `MemoryConfigSource` permite inyectar valores deterministas en tests.
  * - `Config` valida las variables requeridas al arranque y expone una `IAppConfig` tipada.
  */
-import type { AppEnvironment, IAppConfig, IConfigDefinition, IFeatureFlags } from '@/types/config';
+import type {
+  AppEnvironment,
+  IAppConfig,
+  IAppTheme,
+  IConfigDefinition,
+  IFeatureFlags,
+} from '@/types/config';
 import { AppError, ConfigValidationError } from '@/lib/errors';
 import type { ILogger } from '@/lib/logger';
 
@@ -46,8 +52,12 @@ const REQUIRED_DEFINITIONS: readonly IConfigDefinition[] = [
   { envKey: 'VITE_APP_ENV', field: 'appEnv', required: true, transform: parseAppEnv },
   { envKey: 'VITE_API_BASE_URL', field: 'apiBaseUrl', required: true },
   { envKey: 'VITE_TENANT_ID', field: 'tenantId', required: true },
+  { envKey: 'VITE_CLIENT_SUBDOMAIN_BASE', field: 'clientSubdomainBase', required: false },
   { envKey: 'VITE_DEEPSEEK_API_KEY', field: 'deepSeekApiKey', required: false },
 ];
+
+/** Valor por defecto del dominio base de subdominios de tenants (coincide con el backend). */
+const DEFAULT_CLIENT_SUBDOMAIN_BASE = 'clientes.omni2.app';
 
 /** Definiciones de feature flags mapeadas a `IFeatureFlags`. */
 const FEATURE_FLAG_DEFINITIONS: readonly IConfigDefinition[] = [
@@ -93,6 +103,60 @@ const FEATURE_FLAG_DEFINITIONS: readonly IConfigDefinition[] = [
     required: false,
     transform: parseBoolean,
   },
+  {
+    envKey: 'VITE_FEATURE_APPEARANCE',
+    field: 'appearance',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_BOTS',
+    field: 'bots',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_OPERATIONS',
+    field: 'operations',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_ADS',
+    field: 'ads',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_CRM',
+    field: 'crm',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_HOSTS',
+    field: 'hosts',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_MAINTENANCE_RUN_NOW',
+    field: 'maintenanceRunNow',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_RECIPIENT_FILES',
+    field: 'recipientFiles',
+    required: false,
+    transform: parseBoolean,
+  },
+  {
+    envKey: 'VITE_FEATURE_PORTAL',
+    field: 'portal',
+    required: false,
+    transform: parseBoolean,
+  },
 ];
 
 /** Valores por defecto de los feature flags (fail-closed). */
@@ -104,6 +168,24 @@ const FEATURE_FLAG_DEFAULTS: IFeatureFlags = {
   developerSchemas: false,
   analytics: false,
   cdnDeploy: false,
+  appearance: false,
+  bots: false,
+  operations: false,
+  ads: false,
+  crm: false,
+  hosts: false,
+  maintenanceRunNow: false,
+  recipientFiles: false,
+  portal: false,
+};
+
+/** Tema por defecto del configurador (paleta emerald/azul histórica). */
+export const DEFAULT_THEME: IAppTheme = {
+  primaryColor: '#10b981',
+  accentColor: '#3b82f6',
+  surfaceColor: '#ffffff',
+  textColor: '#0f172a',
+  brandBadge: '#10b981',
 };
 
 /** Valida y normaliza el entorno de aplicación. */
@@ -196,7 +278,10 @@ export class Config {
       appEnv: values.appEnv as AppEnvironment,
       apiBaseUrl: values.apiBaseUrl as string,
       tenantId: values.tenantId as string,
+      clientSubdomainBase:
+        (values.clientSubdomainBase as string | undefined) ?? DEFAULT_CLIENT_SUBDOMAIN_BASE,
       deepSeekApiKey: (values.deepSeekApiKey as string | undefined) ?? '',
+      theme: { ...DEFAULT_THEME },
       features,
     };
   }

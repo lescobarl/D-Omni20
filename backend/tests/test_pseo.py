@@ -20,6 +20,7 @@ import uuid
 from urllib.parse import urlparse
 
 import pytest
+from app.models.landing import TenantLanding
 from app.models.pseo_batch import PseoBatch
 from app.models.pseo_host import PseoHost
 from app.models.pseo_page import PseoPage
@@ -46,6 +47,7 @@ def _clean_pseo(container, tenant_id, test_settings) -> None:
     el lifespan de la app solo corre una vez al inicio de la sesión.
     """
     with container.database.session_scope() as session:
+        session.execute(delete(TenantLanding))
         session.execute(delete(PseoPage))
         session.execute(delete(PseoBatch))
         session.execute(delete(PseoHost))
@@ -56,8 +58,17 @@ def _clean_pseo(container, tenant_id, test_settings) -> None:
     yield
 
 
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(tenant_admin_token: str) -> None:
+    """Los endpoints de gestión (matrix-upload) requieren RBAC (dev-tenant)."""
+    _AUTH["Authorization"] = f"Bearer {tenant_admin_token}"
+
+
 def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+    return {"X-Tenant-Id": str(tenant_id), **_AUTH}
 
 
 def _host_headers(host: str) -> dict[str, str]:
@@ -70,11 +81,13 @@ def _seed_landing(
     *,
     campaign_id: uuid.UUID | None = None,
     name: str = "Landing PSEO",
+    slug: str | None = None,
 ):
     repo = SqlAlchemyLandingRepository(db_session)
     landing = repo.create(
         tenant_id=tenant_id,
         campaign_id=campaign_id or uuid.uuid4(),
+        slug=slug or "landing-pseo",
         name=name,
         config={"title": name, "blocks": []},
     )
@@ -440,6 +453,19 @@ class TestEmbedAndJsonLd:
         assert "X-Tenant-Id" in body
         assert "omnibotia-config" in body
         assert "whatsapp_intent" not in body
+
+    def test_static_portal_js_served_200(self, client):
+        response = client.get("/static/portal.js")
+        assert response.status_code == 200
+        assert "javascript" in response.headers["content-type"]
+        body = response.text
+        assert "omnibotia-config" in body
+        assert "/api/v1/portal/summary" in body
+        # P4: el resumen renderiza las tarjetas de CRM (oportunidades y próximos pasos).
+        assert "Mis oportunidades" in body
+        assert "Próximos pasos" in body
+        # El widget del portal es agnóstico del tenant: NO envía X-Tenant-Id.
+        assert "X-Tenant-Id" not in body
 
     def test_cors_preflight_from_cdn_origin(self, client):
         response = client.options(

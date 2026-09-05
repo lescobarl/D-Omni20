@@ -26,6 +26,42 @@ export interface IFeatureFlags {
   analytics: boolean;
   /** Habilita el despliegue al CDN desde la vista previa. */
   cdnDeploy: boolean;
+  /** Habilita la configuración de apariencia del tenant (rebranding). */
+  appearance: boolean;
+  /** Habilita la sección Bots/Conversaciones (Fase 7). */
+  bots: boolean;
+  /** Habilita la 3ª área Operación del Bot (Bloque B de LAE Omni2.0). */
+  operations: boolean;
+  /** Habilita la sección Captación/ADS (C-1, eslabón ① de atribución UTM). */
+  ads: boolean;
+  /** Habilita el subsistema CRM (pipeline "Ventas", tareas, SLA y embudo). */
+  crm: boolean;
+  /** Habilita la sección Dominios personalizados (PSEO hosts). */
+  hosts: boolean;
+  /** Habilita la ejecución manual del mantenimiento programado (B.9). */
+  maintenanceRunNow: boolean;
+  /** Habilita el envío masivo sobre archivos de destinatarios reutilizables (GAP 2). */
+  recipientFiles: boolean;
+  /** Habilita el configurador del Portal del Cliente (modo portal del editor). */
+  portal: boolean;
+}
+
+/** Paleta de apariencia del tenant usada como tema por defecto (rebranding). */
+export interface IAppTheme {
+  /** Color primario de la marca (hex, p. ej. `#10b981`). */
+  primaryColor: string;
+  /** Color de acento (hex). */
+  accentColor: string;
+  /** Color de superficie o fondo (hex). */
+  surfaceColor: string;
+  /** Color de texto principal (hex). */
+  textColor: string;
+  /** Color de la insignia de marca (hex). */
+  brandBadge: string;
+  /** URL opcional del logo del tenant. */
+  logoUrl?: string;
+  /** Fuente tipográfica opcional del tenant. */
+  fontFamily?: string;
 }
 
 /** Configuración tipada y validada de la aplicación. */
@@ -38,8 +74,12 @@ export interface IAppConfig {
   apiBaseUrl: string;
   /** Identificador del tenant aislado. */
   tenantId: string;
+  /** Dominio base bajo el que se sirven los subdominios de los tenants (p. ej. `clientes.omni2.app`). */
+  clientSubdomainBase: string;
   /** Clave de API de DeepSeek (solo desarrollo; nunca en producción). */
   deepSeekApiKey: string;
+  /** Tema por defecto del tenant (fallback ante ausencia de apariencia). */
+  theme: IAppTheme;
   /** Banderas de funcionalidad activas. */
   features: IFeatureFlags;
 }

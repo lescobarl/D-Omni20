@@ -10,7 +10,7 @@
  * - Expone el estado reactivo del compilador para que la UI lo consuma.
  */
 import { useEffect, useRef } from 'react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import { getCompilerService, useCompilerStore } from '@/store/compilerStore';
 import { serializeLandingConfig } from '@/core/landingCode';
 import type { CompilerStatus } from '@/store/compilerStore';
@@ -43,7 +43,8 @@ export interface IUseCompiledLanding {
  * @returns Estado reactivo del flujo de compilación.
  */
 export function useCompiledLanding(): IUseCompiledLanding {
-  const landing = useEditorStore((state) => state.landing);
+  const store = useEditorStoreContext();
+  const landing = store((state) => state.landing);
   const status = useCompilerStore((state) => state.status);
   const html = useCompilerStore((state) => state.html);
   const durationMs = useCompilerStore((state) => state.durationMs);

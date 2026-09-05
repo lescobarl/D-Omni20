@@ -18,9 +18,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "baseUrl": ".",
+    // Sin `baseUrl`: desde TS 4.1 `paths` se resuelve relativo al tsconfig
+    // (evita la deprecación de `baseUrl` que dejará de funcionar en TS 7.0).
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
 
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]

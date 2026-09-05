@@ -13,8 +13,9 @@ deleted]`` y el tenant-scoping RLS.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint, Uuid
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import (
@@ -39,3 +40,18 @@ class PseoHost(Base, UUIDPrimaryKeyMixin, TimestampsMixin, SyncTupleMixin, Tenan
         index=True,
     )
     host: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+
+    # Estado del dominio personalizado (feature "Dominios").
+    # ``pending`` = registrado y a la espera de verificación DNS (TXT
+    # ``omni2-verify=<token>``); ``active`` = verificado y servible públicamente.
+    # Solo los hosts ``active`` resuelven tenant en ``get_pseo_tenant_by_host``
+    # (fail-closed 404 para pending/deleted — sin leak). El seed de dev/tests usa
+    # ``upsert`` (activa el host) para que el serving público siga funcionando.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending", index=True
+    )
+    verify_token: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Solo se fija cuando la verificación DNS del TXT tiene éxito (no auto-fill).
+    verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

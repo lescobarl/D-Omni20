@@ -9,8 +9,16 @@ import pytest
 from app.repositories.sqlalchemy_repositories import SqlAlchemyMarketplaceRepository
 
 
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    _AUTH["Authorization"] = f"Bearer {super_admin_token}"
+
+
 def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+    return {"X-Tenant-Id": str(tenant_id), **_AUTH}
 
 
 def _seed_template(
@@ -83,9 +91,10 @@ class TestCreateTemplate:
         )
         assert response.status_code == 422
 
-    def test_missing_tenant_header_is_forbidden(self, client):
+    def test_missing_tenant_header_is_forbidden(self, client, super_admin_token):
         response = client.post(
             "/api/v1/marketplace/templates",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
             json={"name": "X", "category": "servicios", "config": {}},
         )
         assert response.status_code == 403
@@ -146,8 +155,11 @@ class TestListTemplates:
         body = response.json()
         assert all(item["name"] != "Privado" for item in body["items"])
 
-    def test_missing_tenant_header_is_forbidden(self, client):
-        response = client.get("/api/v1/marketplace/templates")
+    def test_missing_tenant_header_is_forbidden(self, client, super_admin_token):
+        response = client.get(
+            "/api/v1/marketplace/templates",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
+        )
         assert response.status_code == 403
 
 
@@ -214,10 +226,13 @@ class TestImportTemplate:
         )
         assert response.status_code == 422
 
-    def test_missing_tenant_header_is_forbidden(self, client, tenant_id, db_session):
+    def test_missing_tenant_header_is_forbidden(
+        self, client, tenant_id, db_session, super_admin_token
+    ):
         template = _seed_template(db_session, tenant_id)
         response = client.post(
             f"/api/v1/marketplace/templates/{template.id}/import",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
             json={"campaign_id": str(uuid.uuid4())},
         )
         assert response.status_code == 403

@@ -18,6 +18,16 @@ const DEV_SERVER_COMMAND = 'npm run dev';
 const WEB_SERVER_TIMEOUT_MS = 120_000;
 /** Presupuesto por test (regla CLAUDE 0.0: máx. 30s). */
 const TEST_TIMEOUT_MS = 30_000;
+/**
+ * Presupuesto por test para Firefox (regla CLAUDE 0.0).
+ * Firefox es el navegador más lento del conjunto: el editor embarca Monaco y sus
+ * Web Workers, y el cierre de contexto es notablemente más costoso que en
+ * Chromium/WebKit. Bajo la ejecución paralela completa (`fullyParallel`) en
+ * equipos limitados, los flujos pesados (editor y bots) y su teardown superan
+ * los 30s solo en esta combinación, aunque pasan con margen en aislamiento
+ * (verificado 18/18). Chromium y WebKit conservan el presupuesto estricto.
+ */
+const FIREFOX_TEST_TIMEOUT_MS = 90_000;
 
 /**
  * Configuración raíz de Playwright.
@@ -29,7 +39,13 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Cota de workers locales a 2. Bajo `fullyParallel` con 3 proyectos, el valor
+  // por defecto (auto = nº de CPUs) dispara hasta 18 navegadores concurrentes y
+  // satura la máquina: Windows suspende la E/S de red bajo presión de memoria y
+  // los tests fallan sistémicamente con `ERR_NETWORK_IO_SUSPENDED` en `goto("/")`.
+  // Con 2 workers hay un máximo de 6 navegadores simultáneos, suficiente para el
+  // conjunto completo (69 tests) de forma fiable en equipos de desarrollo.
+  workers: process.env.CI ? 1 : 2,
   reporter: [['list'], ['html', { open: 'never' }]],
   timeout: TEST_TIMEOUT_MS,
   expect: { timeout: 5_000 },
@@ -43,7 +59,11 @@ export default defineConfig({
 
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      timeout: FIREFOX_TEST_TIMEOUT_MS,
+    },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
 

@@ -10,46 +10,16 @@
  * - `createWorkflowService` expone una implementación lista para el composition root.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { IApiClient } from '@/api/client';
 import type {
   IAppointmentResponse,
   ICheckoutResponse,
+  ILeadAttributionRead,
   ILeadRead,
   IPaymentRead,
   IQuoteResponse,
 } from '@/api/types';
 import { BackendWorkflowService, createWorkflowService } from '@/services/workflowService';
-
-/** Construye un doble de `IApiClient` con todos los métodos del contrato. */
-function makeApiClientMock(): IApiClient {
-  return {
-    health: vi.fn(),
-    listLandings: vi.fn(),
-    getLanding: vi.fn(),
-    createLanding: vi.fn(),
-    updateLanding: vi.fn(),
-    deleteLanding: vi.fn(),
-    publishLanding: vi.fn(),
-    compileLanding: vi.fn(),
-    generateLanding: vi.fn(),
-    generateSchema: vi.fn(),
-    listSchemas: vi.fn(),
-    validateSchema: vi.fn(),
-    listSchemaVersions: vi.fn(),
-    createSchemaVersion: vi.fn(),
-    createCheckout: vi.fn(),
-    confirmCheckout: vi.fn(),
-    captureLead: vi.fn(),
-    generateQuote: vi.fn(),
-    scheduleAppointment: vi.fn(),
-    listMarketplaceTemplates: vi.fn(),
-    createMarketplaceTemplate: vi.fn(),
-    importMarketplaceTemplate: vi.fn(),
-    recordAnalyticsEvent: vi.fn(),
-    getAnalyticsDashboard: vi.fn(),
-    deployToCdn: vi.fn(),
-  };
-}
+import { makeApiClientMock } from '@/test/apiClientMocks';
 
 /** Fábrica de `ICheckoutResponse` (DTO exacto del backend). */
 function makeCheckoutResponse(overrides: Partial<ICheckoutResponse> = {}): ICheckoutResponse {
@@ -97,6 +67,21 @@ function makeLeadRead(overrides: Partial<ILeadRead> = {}): ILeadRead {
     created_at: '2026-08-18T00:00:00Z',
     revision: 1,
     updated_at: '2026-08-18T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/** Fábrica de `ILeadAttributionRead` (DTO exacto del backend). */
+function makeLeadAttributionRead(
+  overrides: Partial<ILeadAttributionRead> = {},
+): ILeadAttributionRead {
+  return {
+    rows: [
+      { campaign: 'c1', source: 'google', total: 1, new: 1, contacted: 0, converted: 0, lost: 0 },
+      { campaign: 'c1', source: 'facebook', total: 1, new: 0, contacted: 1, converted: 0, lost: 0 },
+    ],
+    total_leads: 2,
+    generated_at: '2026-08-18T00:00:00Z',
     ...overrides,
   };
 }
@@ -342,6 +327,30 @@ describe('BackendWorkflowService', () => {
       customer_phone: '5551234567',
       notes: 'Primera visita',
     });
+  });
+
+  it('obtiene la atribución por campaña delegando en el cliente', async () => {
+    const apiClient = makeApiClientMock();
+    (apiClient.getLeadAttribution as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeadAttributionRead(),
+    );
+    const service = new BackendWorkflowService(apiClient);
+
+    const result = await service.getLeadAttribution();
+
+    expect(apiClient.getLeadAttribution).toHaveBeenCalledTimes(1);
+    expect(apiClient.getLeadAttribution).toHaveBeenCalledWith();
+    expect(result.total_leads).toBe(2);
+    expect(result.rows).toHaveLength(2);
+  });
+
+  it('propaga los errores de la atribución sin envolverlos', async () => {
+    const apiClient = makeApiClientMock();
+    const failure = new Error('reporte no disponible');
+    (apiClient.getLeadAttribution as ReturnType<typeof vi.fn>).mockRejectedValue(failure);
+    const service = new BackendWorkflowService(apiClient);
+
+    await expect(service.getLeadAttribution()).rejects.toBe(failure);
   });
 
   it('propaga los errores de la API sin envolverlos', async () => {

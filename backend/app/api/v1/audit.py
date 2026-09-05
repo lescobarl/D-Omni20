@@ -6,12 +6,17 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_audit_service, get_current_tenant
+from app.api.deps import get_audit_service, get_current_tenant, require_role
+from app.models.user import Role
 from app.schemas.audit import AuditLogRead
 from app.schemas.common import Page, Pagination
 from app.services.interfaces import IAuditService
 
-router = APIRouter(prefix="/audit", tags=["audit"])
+router = APIRouter(
+    prefix="/audit",
+    tags=["audit"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.OPERADOR))],
+)
 
 
 @router.get("", response_model=Page[AuditLogRead])

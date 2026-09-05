@@ -12,8 +12,10 @@ from app.api.deps import (
     get_data_matrix_service,
     get_landing_repository,
     get_pseo_service,
+    require_role,
 )
 from app.core.errors import NotFoundError
+from app.models.user import Role
 from app.repositories.interfaces import ILandingRepository
 from app.schemas.generator import (
     MatrixPageResult,
@@ -22,7 +24,11 @@ from app.schemas.generator import (
 )
 from app.services.interfaces import IDataMatrixService, IPseoService, MatrixRowData
 
-router = APIRouter(prefix="/generator", tags=["generator"])
+router = APIRouter(
+    prefix="/generator",
+    tags=["generator"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
 
 
 @router.post(

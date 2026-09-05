@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { collectSourceFiles, FRONTEND_ROOT } from './lib/scanner.mjs';
 
@@ -211,4 +212,9 @@ function main() {
   console.log(`✅ validate:jsdoc — ${files.length} archivo(s) de producto con JSDoc completo.`);
 }
 
-main();
+// Guarda ESM estándar: solo ejecuta la CLI cuando se invoca directamente;
+// al importar `validateFile` desde otros scripts (p. ej. `fix-jsdoc.mjs`)
+// el módulo queda libre de efectos secundarios.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

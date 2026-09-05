@@ -95,6 +95,22 @@ class TenantIsolationError(AppError):
     default_message = "Contexto de tenant inválido o ausente"
 
 
+class UnauthorizedError(AppError):
+    """Autenticación requerida o token inválido/expirado (401)."""
+
+    status_code = 401
+    code = "auth.unauthorized"
+    default_message = "Autenticación requerida o credenciales inválidas"
+
+
+class ForbiddenError(AppError):
+    """El usuario autenticado no tiene permiso para la operación (403)."""
+
+    status_code = 403
+    code = "auth.forbidden"
+    default_message = "No tiene permisos para realizar esta operación"
+
+
 class DependencyError(AppError):
     """Fallo de una dependencia externa (DB, IA, Redis) con contexto."""
 

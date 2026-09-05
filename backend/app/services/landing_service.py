@@ -11,6 +11,7 @@ Contrato:
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 
@@ -27,7 +28,23 @@ from app.schemas.landing import (
     LandingUpdate,
 )
 from app.services.compiler_service import minify_html
-from app.services.interfaces import IAuditService, ICompilerService, ILandingService
+from app.services.interfaces import (
+    IAuditService,
+    ICdnDeploymentService,
+    ICompilerService,
+    ILandingService,
+)
+
+
+def _slugify(value: str) -> str:
+    """Normaliza un texto a slug URL amigable (minúsculas, guiones).
+
+    Ej.: ``"Casa con vista al lago Tequesquitengo"`` →
+    ``"casa-con-vista-al-lago-tequesquitengo"``. Si el resultado queda vacío,
+    devuelve ``"landing"`` como valor por defecto.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "landing"
 
 
 class LandingService(ILandingService):
@@ -37,11 +54,13 @@ class LandingService(ILandingService):
         repository: ILandingRepository,
         audit: IAuditService,
         compiler: ICompilerService,
+        cdn: ICdnDeploymentService,
         logger: ILogger,
     ) -> None:
         self._repository = repository
         self._audit = audit
         self._compiler = compiler
+        self._cdn = cdn
         self._logger = logger
 
     def create(self, *, tenant_id: uuid.UUID, data: LandingCreate) -> LandingRead:
@@ -55,9 +74,19 @@ class LandingService(ILandingService):
                 context={"tenant_id": str(tenant_id), "campaign_id": str(data.campaign_id)},
             )
 
+        slug = data.slug or _slugify(data.name)
+        existing_slug = self._repository.get_by_slug(tenant_id=tenant_id, slug=slug)
+        if existing_slug is not None:
+            raise ConflictError(
+                "Ya existe una landing con esta URL amigable",
+                operation="landing.create",
+                context={"tenant_id": str(tenant_id), "slug": slug},
+            )
+
         landing = self._repository.create(
             tenant_id=tenant_id,
             campaign_id=data.campaign_id,
+            slug=slug,
             name=data.name,
             config=data.config,
         )
@@ -66,7 +95,7 @@ class LandingService(ILandingService):
             operation="landing.create",
             entity_type="tenant_landing",
             entity_id=str(landing.id),
-            details={"campaign_id": str(data.campaign_id), "name": data.name},
+            details={"campaign_id": str(data.campaign_id), "name": data.name, "slug": slug},
         )
         self._logger.info(
             "landing.created",
@@ -74,6 +103,7 @@ class LandingService(ILandingService):
             landing_id=str(landing.id),
             tenant_id=str(tenant_id),
             campaign_id=str(data.campaign_id),
+            slug=slug,
         )
         return LandingRead.model_validate(landing)
 
@@ -182,6 +212,11 @@ class LandingService(ILandingService):
             tenant_id=str(tenant_id),
             published=str(published),
         )
+        # Despliegue automático al CDN: publicar genera la versión + URL + HTML
+        # compilado de forma determinista para CUALQUIER cliente, servida por
+        # ``GET /cdn/{landing_id}/v{version}`` en un navegador independiente.
+        if published:
+            self._cdn.deploy(tenant_id=tenant_id, landing_id=landing_id)
         return LandingRead.model_validate(landing)
 
     def compile(

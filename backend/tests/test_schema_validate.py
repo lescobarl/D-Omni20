@@ -7,8 +7,16 @@ import uuid
 import pytest
 
 
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    _AUTH["Authorization"] = f"Bearer {super_admin_token}"
+
+
 def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+    return {"X-Tenant-Id": str(tenant_id), **_AUTH}
 
 
 class TestSchemaValidateEndpoint:
@@ -82,9 +90,13 @@ class TestSchemaValidateEndpoint:
         response = client.post("/api/v1/schemas/validate", json=payload, headers=_tenant_headers(tenant_id))
         assert response.status_code == 422
 
-    def test_missing_tenant_header_is_forbidden(self, client):
+    def test_missing_tenant_header_is_forbidden(self, client, super_admin_token):
         payload = {"schema": {"type": "object"}}
-        response = client.post("/api/v1/schemas/validate", json=payload)
+        response = client.post(
+            "/api/v1/schemas/validate",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
+            json=payload,
+        )
         assert response.status_code == 403
 
 

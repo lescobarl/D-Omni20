@@ -21,6 +21,7 @@ from app.schemas.workflow import (
     AppointmentResponse,
     CheckoutRequest,
     CheckoutResponse,
+    LeadAttributionRead,
     LeadRead,
     LeadRequest,
     PaymentRead,
@@ -187,6 +188,10 @@ class IWhatsAppSender(ABC):
         """Envía un mensaje de plantilla. Devuelve ``True`` si se aceptó."""
 
     @abstractmethod
+    def send_text(self, *, to_phone: str, text: str) -> bool:
+        """Envía un mensaje de texto libre (ventana de servicio al cliente, 24h)."""
+
+    @abstractmethod
     def verify_webhook_signature(
         self, *, payload: bytes, signature: str | None
     ) -> bool:
@@ -194,6 +199,41 @@ class IWhatsAppSender(ABC):
 
     def close(self) -> None:
         """Libera recursos si los hubiera. No-op por defecto."""
+
+
+class IMetaGraphMessagesSender(ABC):
+    """Puerto para enviar mensajes vía la Graph API de Meta (Instagram/Messenger).
+
+    Messenger y la Instagram Messaging API comparten el endpoint ``me/messages``
+    de la Send API; el ``access_token`` (token de página para Messenger, token
+    de cuenta profesional para Instagram) determina el ámbito del envío y el
+    ``recipient_id`` es el id de ámbito del remitente del webhook.
+    """
+
+    @abstractmethod
+    def send_text(self, *, recipient_id: str, text: str) -> bool:
+        """Envía un mensaje de texto. Devuelve ``True`` si la API lo aceptó."""
+
+    @abstractmethod
+    def verify_webhook_signature(
+        self, *, payload: bytes, signature: str | None
+    ) -> bool:
+        """Valida la firma ``X-Hub-Signature-256`` de un webhook de Meta."""
+
+    def close(self) -> None:
+        """Libera recursos si los hubiera. No-op por defecto."""
+
+
+class IWhatsAppSenderFactory(ABC):
+    """Fábrica de senders de WhatsApp por tenant (Fase 6.1 — multi-WABA por empresa).
+
+    Resuelve el sender con las credenciales del canal WhatsApp del tenant
+    (``tenant_channels``) para evitar el fallback global de credenciales.
+    """
+
+    @abstractmethod
+    def resolve_sender_for_tenant(self, *, tenant_id: uuid.UUID) -> IWhatsAppSender | None:
+        """Resuelve el sender del tenant. None si no hay canal WhatsApp habilitado con credenciales."""
 
 
 class IGoogleCalendarProvider(ICalendarProvider):
@@ -283,10 +323,24 @@ class IWorkflowService(ABC):
         """Devuelve un prospecto por su ID."""
 
     @abstractmethod
+    def find_lead_by_phone(
+        self, *, tenant_id: uuid.UUID, phone: str
+    ) -> LeadRead | None:
+        """Devuelve el lead más reciente del tenant con ese teléfono (o ``None``).
+
+        Permite al subsistema del BOT heredar la atribución de campaña de un
+        lead capturado en la landing hacia la conversación del mismo contacto.
+        """
+
+    @abstractmethod
     def list_leads(
         self, *, tenant_id: uuid.UUID, page: int, page_size: int
     ) -> Page[LeadRead]:
         """Página de prospectos del tenant."""
+
+    @abstractmethod
+    def lead_attribution(self, *, tenant_id: uuid.UUID) -> LeadAttributionRead:
+        """Reporte de atribución por campaña (UTM) del tenant activo."""
 
     # ---- Cotizaciones -----------------------------------------------------
     @abstractmethod
@@ -325,3 +379,30 @@ class IWorkflowService(ABC):
         self, *, tenant_id: uuid.UUID, page: int, page_size: int
     ) -> Page[AppointmentRead]:
         """Página de citas del tenant."""
+
+    # ---- Portal del cliente (C-3) ------------------------------------------
+    # Consultas acotadas por ``tenant_id`` + ``customer_email`` (identidad del
+    # cliente en el portal privado). Reutilizan la paginación estándar.
+    @abstractmethod
+    def list_payments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[PaymentRead]:
+        """Página de pagos del cliente (identificado por su correo) en el tenant."""
+
+    @abstractmethod
+    def list_leads_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[LeadRead]:
+        """Página de leads del cliente (identificado por su correo) en el tenant."""
+
+    @abstractmethod
+    def list_quotes_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[QuoteRead]:
+        """Página de cotizaciones del cliente (identificado por su correo) en el tenant."""
+
+    @abstractmethod
+    def list_appointments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[AppointmentRead]:
+        """Página de citas del cliente (identificado por su correo) en el tenant."""

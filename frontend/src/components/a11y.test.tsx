@@ -27,6 +27,8 @@ import { createBlockInstance } from '@/core/blocks';
 import { createTestConfig } from '@/test/config';
 import { useCompilerStore } from '@/store/compilerStore';
 import { useEditorStore } from '@/store/editorStore';
+import { resetAuthSession, seedAuthenticatedSession } from '@/test/authSession';
+import { Badge, Button, EmptyState, ErrorState, Input, Modal, Toast } from '@/components/ui';
 
 describe('Accesibilidad (a11y)', () => {
   beforeAll(() => {
@@ -39,6 +41,8 @@ describe('Accesibilidad (a11y)', () => {
     localStorage.clear();
     useEditorStore.getState().reset();
     useCompilerStore.getState().reset();
+    resetAuthSession();
+    seedAuthenticatedSession();
   });
 
   it('audita la aplicación completa sin violaciones', async () => {
@@ -184,6 +188,43 @@ describe('Accesibilidad (a11y)', () => {
     const { container } = render(
       <main>
         <Canvas />
+      </main>,
+    );
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita los componentes compartidos de la librería ui sin violaciones', async () => {
+    const { container } = render(
+      <main>
+        <div className="space-y-3">
+          <Button>Crear contacto</Button>
+          <Button variant="secondary" size="sm">
+            Editar
+          </Button>
+          <Input label="Teléfono" required />
+          <Input label="Correo" error="Correo inválido" />
+          <Badge tone="sky">25%</Badge>
+          <EmptyState title="Aún no hay contactos en el directorio." />
+          <ErrorState
+            message="No se pudieron cargar los contactos."
+            detail="Detalle técnico"
+            onRetry={() => undefined}
+          />
+          <Toast items={[{ id: '1', tone: 'success', message: 'Contacto creado' }]} />
+        </div>
+      </main>,
+    );
+
+    await expect(container).toHaveNoViolations();
+  });
+
+  it('audita el diálogo modal compartido sin violaciones', async () => {
+    const { container } = render(
+      <main>
+        <Modal open onClose={() => undefined} title="Detalle de la oportunidad">
+          Contenido del detalle
+        </Modal>
       </main>,
     );
 

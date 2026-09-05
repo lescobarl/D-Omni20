@@ -12,7 +12,9 @@ Contrato:
 from __future__ import annotations
 
 import contextlib
+import re
 from collections.abc import Generator
+from time import perf_counter
 from typing import Any
 
 from sqlalchemy import create_engine, event
@@ -34,8 +36,10 @@ def _set_sqlite_concurrency_pragmas(dbapi_connection: Any, _connection_record: A
     - ``synchronous=NORMAL``: durabilidad suficiente para dev sin fsync por
       commit (PostgreSQL en prod no se ve afectado).
     - ``isolation_level=None``: desactiva el ``BEGIN`` automático de pysqlite;
-      SQLAlchemy emite su propio ``BEGIN IMMEDIATE`` vía el evento de engine
-      (ver :func:`_sqlite_begin_immediate`).
+      SQLAlchemy emite su propio ``BEGIN`` diferido vía el evento de engine
+      (ver :func:`_sqlite_begin_deferred`) y lo actualiza a ``BEGIN IMMEDIATE``
+      solo en la primera escritura de cada transacción (ver
+      :func:`_sqlite_upgrade_to_immediate_on_write`).
     """
     cursor = dbapi_connection.cursor()
     try:
@@ -47,18 +51,57 @@ def _set_sqlite_concurrency_pragmas(dbapi_connection: Any, _connection_record: A
     dbapi_connection.isolation_level = None
 
 
-def _sqlite_begin_immediate(conn: Connection) -> None:
-    """Emita ``BEGIN IMMEDIATE`` en lugar del ``BEGIN`` diferido (solo SQLite).
+_WRITE_STATEMENT_RE = re.compile(
+    r"^\s*(INSERT|UPDATE|DELETE|REPLACE|UPSERT|CREATE|ALTER|DROP|REINDEX|ANALYZE)\b",
+    re.IGNORECASE,
+)
 
-    Bajo carga paralela (threadpool de uvicorn + auditoría + scheduler), una
-    transacción que inicia en modo diferido y luego intenta escribir devuelve
-    ``SQLITE_BUSY`` de inmediato: SQLite no puede esperar a la cerradura al
-    actualizar una transacción de lector a escritor dentro de WAL (el
-    ``busy_timeout`` no aplica en esa actualización). Con ``BEGIN IMMEDIATE``
-    el escritor adquiere la cerradura al inicio y, si otro escritor la tiene,
-    espera hasta ``busy_timeout`` (30s): los escritores se serializan con una
-    espera acotada en vez de fallar o quedarse atascados.
+
+def _sqlite_begin_deferred(conn: Connection) -> None:
+    """Emita ``BEGIN`` diferido en lugar de ``BEGIN IMMEDIATE`` (solo SQLite).
+
+    Una transacción diferida solo toma la cerradura ``SHARED`` (lectura) y no
+    adquiere la ``RESERVED`` (escritura) hasta que una sentencia escribe. Con
+    esto las peticiones de solo lectura (stats, cuota, conversaciones, cola…)
+    conviven en WAL sin bloquearse entre sí, ni consigo mismas: la sesión del
+    request y una segunda sesión de un servicio de gobierno pueden leer a la vez.
+
+    El paso a modo escritura se hace en la primera escritura, vía
+    :func:`_sqlite_upgrade_to_immediate_on_write`, donde ``busy_timeout`` sí
+    aplica y los escritores se serializan con espera acotada.
     """
+    # Reinicia la bandera por transacción: cada nueva transacción vuelve a
+    # comenzar en modo diferido hasta su primera escritura.
+    conn.info["_sqlite_immediate"] = False
+    conn.exec_driver_sql("BEGIN")
+
+
+def _sqlite_upgrade_to_immediate_on_write(
+    conn: Connection,
+    _cursor: Any,
+    statement: str,
+    _parameters: Any,
+    _context: Any,
+    _executemany: bool,
+) -> None:
+    """Actualiza a ``BEGIN IMMEDIATE`` en la primera escritura (solo SQLite).
+
+    SQLite no puede actualizar una transacción de lector (``SHARED``) a escritor
+    (``RESERVED``) dentro de WAL esperando el ``busy_timeout``: ese upgrade
+    devuelve ``SQLITE_BUSY`` de inmediato. La solución limpia es hacer ``COMMIT``
+    de la transacción diferida (libera ``SHARED``) y reiniciarla con
+    ``BEGIN IMMEDIATE``, sentencia que sí respeta ``busy_timeout`` (30s): los
+    escritores se serializan con espera acotada y las lecturas nunca retienen
+    la cerradura ``RESERVED`` durante toda la petición.
+    """
+    if conn.info.get("_sqlite_immediate"):
+        return
+    if not _WRITE_STATEMENT_RE.match(statement):
+        return
+    if not conn.in_transaction():
+        return
+    conn.info["_sqlite_immediate"] = True
+    conn.exec_driver_sql("COMMIT")
     conn.exec_driver_sql("BEGIN IMMEDIATE")
 
 
@@ -85,7 +128,12 @@ class Database:
         self.engine: Engine = create_engine(engine_url, **kwargs)
         if is_sqlite:
             event.listen(self.engine, "connect", _set_sqlite_concurrency_pragmas)
-            event.listen(self.engine, "begin", _sqlite_begin_immediate)
+            event.listen(self.engine, "begin", _sqlite_begin_deferred)
+            event.listen(
+                self.engine,
+                "before_cursor_execute",
+                _sqlite_upgrade_to_immediate_on_write,
+            )
         self.session_factory: sessionmaker[Session] = sessionmaker(
             bind=self.engine, expire_on_commit=False, future=True
         )
@@ -112,6 +160,31 @@ class Database:
             raise
         finally:
             session.close()
+
+    def optimize(self) -> dict[str, int]:
+        """Optimización física (VACUUM + REINDEX) con conexión cruda autocommit.
+
+        ``VACUUM`` no puede ejecutarse dentro de una transacción en SQLite, por
+        lo que se usa una conexión cruda del pool en modo autocommit (sin BEGIN;
+        ``isolation_level=None``). En PostgreSQL no aplica (autovacuum) y es un
+        no-op informado. Devuelve la duración en ms y un flag de ejecución.
+        """
+        started = perf_counter()
+        if self.engine.url.get_backend_name() != "sqlite":
+            # PostgreSQL: el autovacuum gestiona la compactación; no-op informado.
+            return {"duration_ms": 0, "executed": 0}
+        raw = self.engine.raw_connection()
+        try:
+            cursor = raw.cursor()
+            try:
+                cursor.execute("VACUUM")
+                cursor.execute("REINDEX")
+            finally:
+                cursor.close()
+            raw.commit()
+        finally:
+            raw.close()
+        return {"duration_ms": int((perf_counter() - started) * 1000), "executed": 1}
 
     def dispose(self) -> None:
         """Cierra el pool de conexiones (shutdown limpio del contenedor DI)."""

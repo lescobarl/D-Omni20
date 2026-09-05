@@ -16,6 +16,7 @@ import App from '@/App';
 import { BLOCK_CATALOG } from '@/core/blockCatalog';
 import { useEditorStore } from '@/store/editorStore';
 import { createTestConfig } from '@/test/config';
+import { resetAuthSession, seedAuthenticatedSession } from '@/test/authSession';
 
 /**
  * Renderiza la aplicación y expone los tres paneles del editor.
@@ -49,6 +50,8 @@ describe('Editor (interacciones complejas)', () => {
   beforeEach(() => {
     localStorage.clear();
     useEditorStore.getState().reset();
+    resetAuthSession();
+    seedAuthenticatedSession();
   });
 
   it('flujo completo: agrega bloques de la librería y los refleja en canvas y código', async () => {

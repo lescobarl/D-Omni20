@@ -17,6 +17,12 @@ class TenantCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
 
 
+class TenantUpdate(BaseModel):
+    """Payload para actualizar un tenant (solo el nombre; el slug es inmutable)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+
+
 class TenantRead(ORMModel):
     """Tenant tal como se expone a los clientes."""
 

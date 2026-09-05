@@ -28,3 +28,8 @@ Thumbs.db
 
 # Data
 data/
+
+# Secretos / artefactos de desarrollo (nunca commitear)
+_tok.json
+backups/
+.pytest_cache/

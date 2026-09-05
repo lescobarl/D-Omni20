@@ -6,7 +6,7 @@
  * - Solo recalcula el código cuando cambia la referencia de `landing`.
  */
 import { useMemo } from 'react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import { generateLandingCode } from '@/core/landingCode';
 
 /**
@@ -20,6 +20,7 @@ import { generateLandingCode } from '@/core/landingCode';
  * @returns La representación HTML funcional de la landing.
  */
 export function useLandingCode(): string {
-  const landing = useEditorStore((state) => state.landing);
+  const store = useEditorStoreContext();
+  const landing = store((state) => state.landing);
   return useMemo(() => generateLandingCode(landing), [landing]);
 }

@@ -12,8 +12,10 @@ from app.api.deps import (
     get_schema_repository,
     get_schema_validator,
     get_schema_version_repository,
+    require_role,
 )
 from app.core.errors import NotFoundError
+from app.models.user import Role
 from app.repositories.interfaces import (
     ISchemaRepository,
     ISchemaVersionRepository,
@@ -28,7 +30,11 @@ from app.schemas.schema import (
 )
 from app.services.interfaces import IAuditService, ISchemaValidator
 
-router = APIRouter(prefix="/schemas", tags=["schemas"])
+router = APIRouter(
+    prefix="/schemas",
+    tags=["schemas"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
 
 
 @router.post("/validate", response_model=SchemaValidateResponse)

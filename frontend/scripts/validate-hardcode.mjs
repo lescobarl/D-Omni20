@@ -5,6 +5,16 @@
  * Contrato:
  * - Detecta URLs literales, credenciales, cadenas de conexión (DSN) y
  *   direcciones de servidor (IP:puerto) embebidas en código de producto.
+ * - Detecta identificadores de tenant quemados (slug o UUID) solo en
+ *   posiciones que identifican a un tenant concreto: asignación a una
+ *   propiedad de tenant (`slug`, `tenant_slug`, `tenant_id`, `tenantId`),
+ *   argumento de una función de tenant (`setActiveTenant`, `loadTenants`,
+ *   etc., incluido el campo `id` del objeto canónico) o segmento de ruta
+ *   tenant-aislada (`tenants/...`). Un slug es una cadena arbitraria en
+ *   minúsculas y un UUID puede pertenecer a cualquier entidad, por lo que un
+ *   detector genérico produciría falsos positivos masivos (p. ej. un
+ *   `placeholder` de UI que muestra el formato esperado); por eso se exige
+ *   contexto de tenant.
  * - El análisis corre sobre código sin comentarios (evita falsos positivos
  *   en JSDoc) y omite coincidencias con interpolación de template literals
  *   (`${...}`), que son dinámicas y no valores quemados.
@@ -58,6 +68,33 @@ const HARDCODE_PATTERNS = [
 ];
 
 /**
+ * Valor de identidad de tenant (slug o UUID) en una posición que identifica a
+ * un tenant concreto.
+ *
+ * Un slug de tenant es una cadena arbitraria en minúsculas y un UUID puede
+ * pertenecer a cualquier entidad (template, conversación, etc.), por lo que un
+ * detector genérico produciría falsos positivos masivos (p. ej. un `placeholder`
+ * de UI que muestra el formato esperado). Solo se considera un identificador de
+ * tenant quemado cuando el literal aparece en una posición que nombra a un
+ * tenant:
+ *  - asignación a una propiedad de tenant (`slug`, `tenant_slug`, `tenantSlug`,
+ *    `tenant_id`, `tenantId`);
+ *  - argumento de una función de tenant (`setActiveTenant`, `setActiveTenantRole`,
+ *    `loadTenants`, `createTenant`, `updateTenant`, `deleteTenant`);
+ *  - segmento de ruta tenant-aislada en una plantilla de URL (`tenants/...`).
+ *
+ * El literal capturado debe ser un slug plausible (minúsculas, dígitos y guiones)
+ * o un UUID v4, y no una interpolación.
+ */
+const TENANT_IDENTITY_CONTEXT =
+  /(?:slug|tenant_slug|tenantSlug|tenant_id|tenantId)\s*[:=]\s*['"]([a-z0-9][a-z0-9-]{1,63}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})['"]|(?:setActiveTenant|setActiveTenantRole|loadTenants|createTenant|updateTenant|deleteTenant)\s*\(\s*['"]([a-z0-9][a-z0-9-]{1,63}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})['"]|setActiveTenant\s*\(\s*\{[^}]*?\bid\s*:\s*['"]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})['"]|tenants\/['"]([a-z0-9][a-z0-9-]{1,63}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})['"]/g;
+
+/** ¿El literal es un UUID (clave canónica) o un slug (identidad pública)? */
+function isTenantUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+}
+
+/**
  * URIs de contrato de protocolos/estándares inmutables y versionados.
  *
  * No son configuración de entorno: identifican estándares públicos (JSON Schema,
@@ -109,6 +146,23 @@ export function findHardcoded(filePath, code) {
         value: match[0].slice(0, 60),
       });
       if (pattern.regex.lastIndex === match.index) pattern.regex.lastIndex += 1;
+    }
+  }
+
+  // Identificadores de tenant (slug o UUID) quemados solo en contexto de tenant.
+  let tenantMatch;
+  TENANT_IDENTITY_CONTEXT.lastIndex = 0;
+  while ((tenantMatch = TENANT_IDENTITY_CONTEXT.exec(clean)) !== null) {
+    const value = tenantMatch[1] ?? tenantMatch[2] ?? tenantMatch[3] ?? tenantMatch[4];
+    const { line, column } = toLineAndColumn(clean, tenantMatch.index);
+    findings.push({
+      line,
+      column,
+      label: isTenantUuid(value) ? 'UUID de tenant quemado' : 'Slug de tenant quemado',
+      value,
+    });
+    if (TENANT_IDENTITY_CONTEXT.lastIndex === tenantMatch.index) {
+      TENANT_IDENTITY_CONTEXT.lastIndex += 1;
     }
   }
 

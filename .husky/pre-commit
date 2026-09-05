@@ -3,4 +3,4 @@
 # husky v9 ejecuta los hooks desde la raíz del repo; aquí nos movemos a frontend/
 cd "$(dirname "$0")/../frontend" || exit 1
 npx lint-staged
-npm test
+npm run test:full

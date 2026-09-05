@@ -28,6 +28,8 @@ describe('Config', () => {
     expect(config.apiBaseUrl).toBe('http://localhost:8000');
     expect(config.tenantId).toBe('test-tenant');
     expect(config.deepSeekApiKey).toBe('');
+    expect(config.theme.primaryColor).toBe('#10b981');
+    expect(config.features.appearance).toBe(false);
   });
 
   it('lanza ConfigValidationError cuando faltan variables requeridas', () => {
@@ -42,6 +44,12 @@ describe('Config', () => {
       VITE_FEATURE_DRAG_DROP: 'true',
       VITE_FEATURE_AI_ASSISTANT: 'false',
       VITE_FEATURE_CODE_EDITOR: '1',
+      VITE_FEATURE_APPEARANCE: 'true',
+      VITE_FEATURE_BOTS: 'true',
+      VITE_FEATURE_OPERATIONS: 'true',
+      VITE_FEATURE_ADS: 'true',
+      VITE_FEATURE_CRM: 'true',
+      VITE_FEATURE_HOSTS: 'true',
     });
     const config = new Config(source, new ConsoleLogger()).load();
 
@@ -49,6 +57,48 @@ describe('Config', () => {
     expect(config.features.aiAssistant).toBe(false);
     expect(config.features.codeEditor).toBe(true);
     expect(config.features.templateMarketplace).toBe(false);
+    expect(config.features.appearance).toBe(true);
+    expect(config.features.bots).toBe(true);
+    expect(config.features.operations).toBe(true);
+    expect(config.features.ads).toBe(true);
+    expect(config.features.crm).toBe(true);
+    expect(config.features.hosts).toBe(true);
+  });
+
+  it('mantiene el flag de apariencia desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.appearance).toBe(false);
+  });
+
+  it('mantiene el flag de bots desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.bots).toBe(false);
+  });
+
+  it('mantiene el flag de operación del bot desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.operations).toBe(false);
+  });
+
+  it('mantiene el flag de captación (ADS) desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.ads).toBe(false);
+  });
+
+  it('mantiene el flag del CRM desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.crm).toBe(false);
+  });
+
+  it('mantiene el flag de dominios personalizados desactivado por defecto (fail-closed)', () => {
+    const config = new Config(new MemoryConfigSource(TEST_ENV), new ConsoleLogger()).load();
+
+    expect(config.features.hosts).toBe(false);
   });
 
   it('rechaza un entorno de aplicación inválido con contexto', () => {

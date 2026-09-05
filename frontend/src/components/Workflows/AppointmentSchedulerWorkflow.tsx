@@ -13,6 +13,7 @@
  */
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { resolveLandingContext, useCurrentLanding } from './landingContext';
 
 /** Duraciones soportadas (minutos) para la cita. */
 const DURATIONS: readonly number[] = [15, 30, 60, 90, 120];
@@ -39,6 +40,7 @@ const TIMEZONES: readonly string[] = [
 export function AppointmentSchedulerWorkflow(): ReactElement {
   const appointment = useWorkflowStore((state) => state.appointment);
   const submitAppointment = useWorkflowStore((state) => state.submitAppointment);
+  const landing = useCurrentLanding();
 
   const [service, setService] = useState('');
   const [startsAt, setStartsAt] = useState('');
@@ -55,6 +57,7 @@ export function AppointmentSchedulerWorkflow(): ReactElement {
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!canSubmit) return;
+    const landingContext = resolveLandingContext(landing);
     void submitAppointment({
       service: service.trim(),
       startsAt: new Date(startsAt).toISOString(),
@@ -63,6 +66,8 @@ export function AppointmentSchedulerWorkflow(): ReactElement {
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      landingId: landingContext?.landing_id,
+      campaignId: landingContext?.campaign_id,
     });
   };
 

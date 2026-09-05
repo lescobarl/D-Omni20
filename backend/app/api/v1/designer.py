@@ -16,8 +16,10 @@ from app.api.deps import (
     get_audit_service,
     get_current_tenant,
     get_landing_service,
+    require_role,
 )
 from app.models.base import utcnow
+from app.models.user import Role
 from app.schemas.common import Page, Pagination
 from app.schemas.landing import (
     LandingAiGenerationRequest,
@@ -31,7 +33,11 @@ from app.schemas.landing import (
 )
 from app.services.interfaces import IAiService, IAuditService, ILandingService
 
-router = APIRouter(prefix="/designer", tags=["designer"])
+router = APIRouter(
+    prefix="/designer",
+    tags=["designer"],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+)
 
 
 @router.get("", response_model=Page[LandingRead])

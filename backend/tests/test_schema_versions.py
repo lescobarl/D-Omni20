@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
+
 from app.repositories.sqlalchemy_repositories import SqlAlchemySchemaRepository
 
 BASE_SCHEMA_JSON = {
@@ -18,8 +20,16 @@ BASE_SCHEMA_JSON = {
 }
 
 
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    _AUTH["Authorization"] = f"Bearer {super_admin_token}"
+
+
 def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+    return {"X-Tenant-Id": str(tenant_id), **_AUTH}
 
 
 def _seed_schema(
@@ -130,10 +140,13 @@ class TestCreateSchemaVersion:
         )
         assert response.status_code == 422
 
-    def test_missing_tenant_header_is_forbidden(self, client, tenant_id, db_session):
+    def test_missing_tenant_header_is_forbidden(
+        self, client, tenant_id, db_session, super_admin_token
+    ):
         schema = _seed_schema(db_session, tenant_id)
         response = client.post(
             f"/api/v1/schemas/{schema.id}/versions",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
             json={"version": "1.0.0"},
         )
         assert response.status_code == 403
@@ -203,7 +216,12 @@ class TestListSchemaVersions:
         )
         assert response.status_code == 404
 
-    def test_missing_tenant_header_is_forbidden(self, client, tenant_id, db_session):
+    def test_missing_tenant_header_is_forbidden(
+        self, client, tenant_id, db_session, super_admin_token
+    ):
         schema = _seed_schema(db_session, tenant_id)
-        response = client.get(f"/api/v1/schemas/{schema.id}/versions")
+        response = client.get(
+            f"/api/v1/schemas/{schema.id}/versions",
+            headers={"Authorization": f"Bearer {super_admin_token}"},
+        )
         assert response.status_code == 403

@@ -8,44 +8,13 @@
  * - `createAnalyticsService` expone una implementación lista para el composition root.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { IApiClient } from '@/api/client';
 import type {
   IAnalyticsDashboardResponse,
   IAnalyticsEventCreateRequest,
   IAnalyticsEventRead,
 } from '@/api/types';
 import { BackendAnalyticsService, createAnalyticsService } from '@/services/analyticsService';
-
-/** Construye un doble de `IApiClient` con todos los métodos del contrato. */
-function makeApiClientMock(): IApiClient {
-  return {
-    health: vi.fn(),
-    listLandings: vi.fn(),
-    getLanding: vi.fn(),
-    createLanding: vi.fn(),
-    updateLanding: vi.fn(),
-    deleteLanding: vi.fn(),
-    publishLanding: vi.fn(),
-    compileLanding: vi.fn(),
-    generateLanding: vi.fn(),
-    generateSchema: vi.fn(),
-    listSchemas: vi.fn(),
-    validateSchema: vi.fn(),
-    listSchemaVersions: vi.fn(),
-    createSchemaVersion: vi.fn(),
-    createCheckout: vi.fn(),
-    confirmCheckout: vi.fn(),
-    captureLead: vi.fn(),
-    generateQuote: vi.fn(),
-    scheduleAppointment: vi.fn(),
-    listMarketplaceTemplates: vi.fn(),
-    createMarketplaceTemplate: vi.fn(),
-    importMarketplaceTemplate: vi.fn(),
-    recordAnalyticsEvent: vi.fn(),
-    getAnalyticsDashboard: vi.fn(),
-    deployToCdn: vi.fn(),
-  };
-}
+import { makeApiClientMock } from '@/test/apiClientMocks';
 
 /** Fábrica de `IAnalyticsEventRead` (DTO exacto del backend). */
 function makeEvent(overrides: Partial<IAnalyticsEventRead> = {}): IAnalyticsEventRead {

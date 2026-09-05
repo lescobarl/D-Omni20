@@ -15,12 +15,35 @@ import html
 import uuid
 
 import pytest
+from sqlalchemy import delete
 
+from app.models.landing import TenantLanding
 from app.repositories.sqlalchemy_repositories import SqlAlchemyLandingRepository
 
 
+_AUTH: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def _auth_headers(super_admin_token: str) -> None:
+    _AUTH["Authorization"] = f"Bearer {super_admin_token}"
+
+
+@pytest.fixture(autouse=True)
+def _clean_landings(container) -> None:
+    """Limpia landings para evitar choques del slug único entre tests.
+
+    ``db_session`` hace commit al finalizar (no hace rollback), por lo que las
+    landings creadas con el slug por defecto ``landing-pseo`` persisten entre
+    tests y violarían ``uq_tenant_landing_slug``.
+    """
+    with container.database.session_scope() as session:
+        session.execute(delete(TenantLanding))
+        session.commit()
+
+
 def _tenant_headers(tenant_id: uuid.UUID) -> dict[str, str]:
-    return {"X-Tenant-Id": str(tenant_id)}
+    return {"X-Tenant-Id": str(tenant_id), **_AUTH}
 
 
 def _seed_landing(
@@ -29,11 +52,13 @@ def _seed_landing(
     *,
     campaign_id: uuid.UUID | None = None,
     name: str = "Landing PSEO",
+    slug: str | None = None,
 ):
     repo = SqlAlchemyLandingRepository(db_session)
     landing = repo.create(
         tenant_id=tenant_id,
         campaign_id=campaign_id or uuid.uuid4(),
+        slug=slug or "landing-pseo",
         name=name,
         config={"title": name, "blocks": []},
     )
@@ -144,11 +169,14 @@ class TestMatrixUpload:
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "resource.not_found"
 
-    def test_missing_tenant_header_is_forbidden(self, client, tenant_id, db_session):
+    def test_missing_tenant_header_is_forbidden(
+        self, client, tenant_id, db_session, super_admin_token
+    ):
         landing = _seed_landing(db_session, tenant_id)
         response = client.post(
             f"/api/v1/generator/matrix-upload/{landing.campaign_id}",
             json=_matrix_payload(),
+            headers={"Authorization": f"Bearer {super_admin_token}"},
         )
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "tenant.isolation_violation"

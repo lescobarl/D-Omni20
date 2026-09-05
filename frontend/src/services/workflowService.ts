@@ -11,6 +11,7 @@ import type { IApiClient } from '@/api/client';
 import type {
   IAppointmentResponse,
   ICheckoutResponse,
+  ILeadAttributionRead,
   ILeadRead,
   IPaymentRead,
   IQuoteResponse,
@@ -73,6 +74,17 @@ export interface IQuoteInput {
   services: IQuoteLineInput[];
   /** Tasa de impuesto en puntos base (0-10000). */
   taxRateBps?: number;
+  /**
+   * Identificador de la landing de origen (hilo compartido de atribución).
+   * Solo se transporta en la capa de dominio/UI; el backend de cotizaciones no
+   * expone un canal de metadatos, por lo que NO se transmite al DTO.
+   */
+  landingId?: string;
+  /**
+   * Identificador de la campaña de la landing de origen (hilo compartido).
+   * Solo se transporta en la capa de dominio/UI; NO se transmite al DTO.
+   */
+  campaignId?: string;
 }
 
 /** Input de dominio para agendar una cita. */
@@ -93,6 +105,17 @@ export interface IAppointmentInput {
   customerPhone?: string;
   /** Notas de la cita (opcional). */
   notes?: string;
+  /**
+   * Identificador de la landing de origen (hilo compartido de atribución).
+   * Solo se transporta en la capa de dominio/UI; el backend de citas no expone
+   * un canal de metadatos, por lo que NO se transmite al DTO.
+   */
+  landingId?: string;
+  /**
+   * Identificador de la campaña de la landing de origen (hilo compartido).
+   * Solo se transporta en la capa de dominio/UI; NO se transmite al DTO.
+   */
+  campaignId?: string;
 }
 
 /** Puerto del servicio de workflows de conversión. */
@@ -103,6 +126,8 @@ export interface IWorkflowService {
   confirmCheckout(paymentId: string): Promise<IPaymentRead>;
   /** Captura un lead en el tenant activo. */
   captureLead(input: ILeadInput): Promise<ILeadRead>;
+  /** Devuelve el reporte de atribución por campaña (UTM) del tenant activo. */
+  getLeadAttribution(): Promise<ILeadAttributionRead>;
   /** Genera una cotización y su PDF. */
   generateQuote(input: IQuoteInput): Promise<IQuoteResponse>;
   /** Agenda una cita y genera su ICS. */
@@ -164,6 +189,17 @@ export class BackendWorkflowService implements IWorkflowService {
     });
     this.logger?.info('workflow.lead.capture', { leadId: lead.id, status: lead.status });
     return lead;
+  }
+
+  /** Devuelve el reporte de atribución por campaña del tenant activo. */
+  public async getLeadAttribution(): Promise<ILeadAttributionRead> {
+    this.logger?.debug('workflow.lead.attribution');
+    const report = await this.apiClient.getLeadAttribution();
+    this.logger?.info('workflow.lead.attribution', {
+      totalLeads: report.total_leads,
+      rows: report.rows.length,
+    });
+    return report;
   }
 
   /** Genera una cotización traduciendo el input de dominio al DTO del backend. */

@@ -6,7 +6,7 @@
  *   (`useShallow`) para evitar re-renderizados innecesarios.
  */
 import { useShallow } from 'zustand/react/shallow';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import type { IBlockDefinition, IBlockInstance } from '@/types/editor';
 
 /** Estado y acciones de bloques expuestas por el hook. */
@@ -42,7 +42,8 @@ export interface IUseEditorBlocks {
  * @returns Objeto con bloques, selección y acciones del store.
  */
 export function useEditorBlocks(): IUseEditorBlocks {
-  return useEditorStore(
+  const store = useEditorStoreContext();
+  return store(
     useShallow((state) => ({
       blocks: state.landing.blocks,
       selectedBlockId: state.selectedBlockId,

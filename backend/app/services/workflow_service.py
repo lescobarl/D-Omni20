@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -18,10 +18,13 @@ from app.core.errors import InputValidationError, NotFoundError
 from app.core.logging import ILogger
 from app.models.workflow import (
     AppointmentStatus,
+    Lead,
     LeadStatus,
     PaymentStatus,
     QuoteStatus,
 )
+from app.repositories.ads_interfaces import IAdsRepository
+from app.repositories.operations_interfaces import IContactRepository
 from app.repositories.workflow_interfaces import IWorkflowRepository
 from app.schemas.common import Page
 from app.schemas.workflow import (
@@ -30,12 +33,19 @@ from app.schemas.workflow import (
     AppointmentResponse,
     CheckoutRequest,
     CheckoutResponse,
+    LeadAttributionRead,
+    LeadAttributionRow,
     LeadRead,
     LeadRequest,
     PaymentRead,
     QuoteRead,
     QuoteRequest,
     QuoteResponse,
+)
+from app.services.crm_interfaces import (
+    ICrmEventPublisher,
+    LeadNeedsHumanEvent,
+    PaymentConfirmedEvent,
 )
 from app.services.interfaces import IAuditService
 from app.services.workflow_interfaces import (
@@ -46,7 +56,7 @@ from app.services.workflow_interfaces import (
     IPaymentGateway,
     IQuoteRenderer,
     ISmsSender,
-    IWhatsAppSender,
+    IWhatsAppSenderFactory,
     IWorkflowService,
 )
 
@@ -80,7 +90,10 @@ class WorkflowService(IWorkflowService):
         crm_webhook_sender: ICrmWebhookSender,
         email_sender: IEmailSender | None = None,
         sms_sender: ISmsSender | None = None,
-        whatsapp_sender: IWhatsAppSender | None = None,
+        whatsapp_sender_factory: IWhatsAppSenderFactory | None = None,
+        contact_repository: IContactRepository | None = None,
+        ads_repository: IAdsRepository | None = None,
+        crm_event_publisher: ICrmEventPublisher | None = None,
         artifacts_dir: str = "artifacts",
     ) -> None:
         self._repository = repository
@@ -92,7 +105,10 @@ class WorkflowService(IWorkflowService):
         self._crm_webhook_sender = crm_webhook_sender
         self._email_sender = email_sender
         self._sms_sender = sms_sender
-        self._whatsapp_sender = whatsapp_sender
+        self._whatsapp_sender_factory = whatsapp_sender_factory
+        self._contact_repository = contact_repository
+        self._ads_repository = ads_repository
+        self._crm_event_publisher = crm_event_publisher
         self._artifacts_dir = Path(artifacts_dir)
 
     # ── Checkout / pagos ───────────────────────────────────────────────────
@@ -205,6 +221,7 @@ class WorkflowService(IWorkflowService):
             payment_id=str(updated.id),
             tenant_id=str(tenant_id),
         )
+        self._emit_payment_confirmed(tenant_id=tenant_id, payment=updated)
         return PaymentRead.model_validate(updated)
 
     def handle_checkout_webhook(
@@ -306,6 +323,7 @@ class WorkflowService(IWorkflowService):
             session_id=str(session_id),
             email_delivered=email_delivered,
         )
+        self._emit_payment_confirmed(tenant_id=tenant_id, payment=updated)
         return payment_read
 
     def get_payment(
@@ -342,6 +360,17 @@ class WorkflowService(IWorkflowService):
     def capture_lead(
         self, *, tenant_id: uuid.UUID, data: LeadRequest
     ) -> LeadRead:
+        # Se resuelve el sender ANTES de la escritura del lead: la fábrica
+        # tenant-aware se liga a la sesión del request (``get_channel_sender_factory``
+        # en deps), por lo que reutiliza la transacción ya abierta por
+        # ``get_current_tenant`` — sin segunda conexión, sin deadlock en SQLite
+        # (``BEGIN IMMEDIATE``, un solo escritor a la vez). En PostgreSQL (MVCC)
+        # el orden es irrelevante; el reorder es solo higiene del camino HTTP.
+        sender = (
+            self._whatsapp_sender_factory.resolve_sender_for_tenant(tenant_id=tenant_id)
+            if self._whatsapp_sender_factory is not None
+            else None
+        )
         lead = self._repository.create_lead(
             tenant_id=tenant_id,
             name=data.name,
@@ -350,15 +379,48 @@ class WorkflowService(IWorkflowService):
             source=data.source,
             metadata=data.metadata,
         )
+        # Atribución UTM (eslabón ①): resuelve la campaña publicitaria activa del
+        # tenant por la firma UTM persistida en ``metadata_json`` y liga el lead.
+        # Best-effort: sin repositorio inyectado o sin firma UTM, el lead queda
+        # sin campaña (``ad_campaign_id`` NULL, FK nullable) sin romper la captura.
+        ad_campaign_id: str | None = None
+        ads_repo = self._ads_repository
+        if ads_repo is not None:
+            utm_meta = lead.metadata_json or {}
+            try:
+                campaign = ads_repo.resolve_by_utm(
+                    tenant_id=tenant_id,
+                    utm_campaign=utm_meta.get("utm_campaign"),
+                    utm_source=utm_meta.get("utm_source"),
+                    utm_medium=utm_meta.get("utm_medium"),
+                )
+            except Exception as exc:
+                self._logger.warning(
+                    "workflow.lead.attribution_failed",
+                    message="No se pudo resolver la campaña publicitaria del lead",
+                    lead_id=str(lead.id),
+                    error=str(exc),
+                )
+                campaign = None
+            if campaign is not None:
+                lead.ad_campaign_id = campaign.id
+                ad_campaign_id = str(campaign.id)
+        self._propagate_contact(tenant_id=tenant_id, lead=lead, data=data)
         lead_read = LeadRead.model_validate(lead)
         crm_delivered = self._crm_webhook_sender.send_lead(lead=lead_read)
+        # Orquestación (P2): un lead marcado ``needs_human`` dispara la
+        # auto-creación de la oportunidad + tarea en el subsistema CRM (M3/M5).
+        # Best-effort: sin emisor inyectado o ante un fallo, la captura del lead
+        # no se rompe (el evento nunca altera el flujo principal).
+        if (data.metadata or {}).get("needs_human"):
+            self._emit_lead_needs_human(tenant_id=tenant_id, lead=lead)
         whatsapp_delivered = False
-        if self._whatsapp_sender is not None and lead_read.phone:
+        if sender is not None and lead_read.phone:
             template_name = str(
                 (data.metadata or {}).get("whatsapp_template") or "lead_notificacion"
             )
             try:
-                whatsapp_delivered = self._whatsapp_sender.send_template_message(
+                whatsapp_delivered = sender.send_template_message(
                     to_phone=lead_read.phone,
                     template_name=template_name,
                     template_variables={"name": lead_read.name},
@@ -377,6 +439,7 @@ class WorkflowService(IWorkflowService):
             entity_id=str(lead.id),
             details={
                 "source": data.source,
+                "ad_campaign_id": ad_campaign_id,
                 "crm_delivered": crm_delivered,
                 "whatsapp_delivered": whatsapp_delivered,
             },
@@ -387,10 +450,79 @@ class WorkflowService(IWorkflowService):
             lead_id=str(lead.id),
             tenant_id=str(tenant_id),
             source=data.source,
+            ad_campaign_id=ad_campaign_id,
             crm_delivered=crm_delivered,
             whatsapp_delivered=whatsapp_delivered,
         )
         return lead_read
+
+    def _propagate_contact(
+        self, *, tenant_id: uuid.UUID, lead: Lead, data: LeadRequest
+    ) -> None:
+        """Propaga el lead al directorio de contactos (eslabón ②) si tiene teléfono.
+
+        Best-effort: un fallo aquí no rompe la captura del lead. Los tags UTM se
+        adjuntan como ``clave:valor`` y se fusionan con los existentes (sin
+        duplicados) porque ``IContactRepository.update`` reemplaza la lista completa.
+        """
+        repo = self._contact_repository
+        if repo is None or not lead.phone:
+            return
+        try:
+            utm_tags = self._utm_tags(lead)
+            existing = repo.get_by_phone(tenant_id=tenant_id, phone=lead.phone)
+            if existing is None:
+                repo.create(
+                    tenant_id=tenant_id,
+                    phone=lead.phone,
+                    name=lead.name,
+                    email=lead.email,
+                    tags=utm_tags,
+                    state="new",
+                    source=data.source,
+                    external_contact_id=str(
+                        (data.metadata or {}).get("external_contact_id") or ""
+                    )
+                    or None,
+                    last_contact_at=datetime.now(UTC),
+                )
+            else:
+                tags = list(dict.fromkeys([*(existing.tags or []), *utm_tags]))
+                repo.update(
+                    tenant_id=tenant_id,
+                    contact_id=existing.id,
+                    fields={
+                        "name": lead.name,
+                        "email": lead.email,
+                        "tags": tags,
+                        "source": data.source,
+                        "last_contact_at": datetime.now(UTC),
+                    },
+                )
+        except Exception as exc:
+            self._logger.warning(
+                "workflow.lead.contact_propagation_failed",
+                message="No se pudo propagar el lead al directorio de contactos",
+                lead_id=str(lead.id),
+                error=str(exc),
+            )
+
+    @staticmethod
+    def _utm_tags(lead: Lead) -> list[str]:
+        """Convierte los parámetros UTM persistidos en tags ``clave:valor``."""
+        metadata = lead.metadata_json or {}
+        tags: list[str] = []
+        for key in (
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_content",
+            "utm_term",
+        ):
+            value = metadata.get(key)
+            if value:
+                tags.append(f"{key}:{value}")
+        return tags
 
     def get_lead(
         self, *, tenant_id: uuid.UUID, lead_id: uuid.UUID
@@ -404,6 +536,21 @@ class WorkflowService(IWorkflowService):
             )
         return LeadRead.model_validate(lead)
 
+    def find_lead_by_phone(
+        self, *, tenant_id: uuid.UUID, phone: str
+    ) -> LeadRead | None:
+        """Devuelve el lead más reciente del tenant con ese teléfono (o ``None``).
+
+        Permite al BOT heredar la atribución de campaña de un lead capturado en
+        la landing hacia la conversación del mismo contacto (eslabón ① → ③).
+        """
+        lead = self._repository.find_lead_by_phone(
+            tenant_id=tenant_id, phone=phone
+        )
+        if lead is None:
+            return None
+        return LeadRead.model_validate(lead)
+
     def list_leads(
         self, *, tenant_id: uuid.UUID, page: int, page_size: int
     ) -> Page[LeadRead]:
@@ -415,6 +562,39 @@ class WorkflowService(IWorkflowService):
             total=total,
             page=page,
             page_size=page_size,
+        )
+
+    def lead_attribution(self, *, tenant_id: uuid.UUID) -> LeadAttributionRead:
+        """Reporte de atribución por campaña (UTM) del tenant activo.
+
+        Conteos de leads activos agrupados por campaña (``utm_campaign``) y
+        fuente, desglosados por estado; agrega el eslabón ② (lead → conversación).
+        """
+        items = self._repository.lead_attribution(tenant_id=tenant_id)
+        rows = [
+            LeadAttributionRow(
+                campaign=item.campaign,
+                source=item.source,
+                total=item.total,
+                new=item.by_status.get(LeadStatus.NEW, 0),
+                contacted=item.by_status.get(LeadStatus.CONTACTED, 0),
+                converted=item.by_status.get(LeadStatus.CONVERTED, 0),
+                lost=item.by_status.get(LeadStatus.LOST, 0),
+            )
+            for item in items
+        ]
+        total_leads = sum(row.total for row in rows)
+        self._audit.record(
+            tenant_id=tenant_id,
+            operation="workflow.lead.attribution",
+            entity_type="workflow_lead",
+            entity_id=None,
+            details={"rows": len(rows), "total_leads": total_leads},
+        )
+        return LeadAttributionRead(
+            rows=rows,
+            total_leads=total_leads,
+            generated_at=datetime.now(UTC),
         )
 
     # ── Cotizaciones ───────────────────────────────────────────────────────
@@ -552,9 +732,9 @@ class WorkflowService(IWorkflowService):
     ) -> AppointmentResponse:
         starts_at = data.starts_at
         if starts_at.tzinfo is None:
-            starts_at = starts_at.replace(tzinfo=timezone.utc)
+            starts_at = starts_at.replace(tzinfo=UTC)
         else:
-            starts_at = starts_at.astimezone(timezone.utc)
+            starts_at = starts_at.astimezone(UTC)
         ends_at = starts_at + timedelta(minutes=data.duration_minutes)
         appointment = self._repository.create_appointment(
             tenant_id=tenant_id,
@@ -690,3 +870,112 @@ class WorkflowService(IWorkflowService):
             page=page,
             page_size=page_size,
         )
+
+    # ---- Portal del cliente (C-3) ───────────────────────────────────────────
+    # Consultas acotadas por ``tenant_id`` + ``customer_email`` (identidad del
+    # cliente en el portal privado). Reutilizan la paginación estándar de los
+    # métodos ``list_*`` homólogos.
+    def list_payments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[PaymentRead]:
+        items, total = self._repository.list_payments_by_email(
+            tenant_id=tenant_id, email=email, page=page, page_size=page_size
+        )
+        return Page(
+            items=[PaymentRead.model_validate(item) for item in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    def list_leads_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[LeadRead]:
+        items, total = self._repository.list_leads_by_email(
+            tenant_id=tenant_id, email=email, page=page, page_size=page_size
+        )
+        return Page(
+            items=[LeadRead.model_validate(item) for item in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    def list_quotes_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[QuoteRead]:
+        items, total = self._repository.list_quotes_by_email(
+            tenant_id=tenant_id, email=email, page=page, page_size=page_size
+        )
+        return Page(
+            items=[QuoteRead.model_validate(item) for item in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    def list_appointments_by_email(
+        self, *, tenant_id: uuid.UUID, email: str, page: int, page_size: int
+    ) -> Page[AppointmentRead]:
+        items, total = self._repository.list_appointments_by_email(
+            tenant_id=tenant_id, email=email, page=page, page_size=page_size
+        )
+        return Page(
+            items=[AppointmentRead.model_validate(item) for item in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    # ── Orquestación (P2): emisión best-effort de eventos hacia el CRM ─────
+    # Sin importaciones cruzadas: el emisor (``ICrmEventPublisher``) es un puerto
+    # inyectado por DI y delegado a :class:`CrmService` en el composition root.
+    def _emit_lead_needs_human(self, *, tenant_id: uuid.UUID, lead: Lead) -> None:
+        """Notifica ``lead.needs_human`` al subsistema CRM (best-effort)."""
+        publisher = self._crm_event_publisher
+        if publisher is None:
+            return
+        try:
+            publisher.publish_lead_needs_human(
+                event=LeadNeedsHumanEvent(
+                    tenant_id=tenant_id,
+                    lead_id=lead.id,
+                    name=lead.name,
+                    email=lead.email,
+                    phone=lead.phone,
+                    source=lead.source,
+                    metadata=lead.metadata_json or {},
+                )
+            )
+        except Exception as exc:
+            self._logger.warning(
+                "workflow.lead.crm_event_failed",
+                message="No se pudo notificar el lead con atención humana al CRM",
+                lead_id=str(lead.id),
+                error=str(exc),
+            )
+
+    def _emit_payment_confirmed(self, *, tenant_id: uuid.UUID, payment: Payment) -> None:
+        """Notifica ``payment.confirmed`` al subsistema CRM (best-effort)."""
+        publisher = self._crm_event_publisher
+        if publisher is None:
+            return
+        try:
+            publisher.publish_payment_confirmed(
+                event=PaymentConfirmedEvent(
+                    tenant_id=tenant_id,
+                    payment_id=payment.id,
+                    customer_email=payment.customer_email,
+                    customer_name=payment.customer_name,
+                    amount_minor=payment.amount_minor,
+                    currency=payment.currency,
+                    metadata=payment.metadata_json or {},
+                )
+            )
+        except Exception as exc:
+            self._logger.warning(
+                "workflow.checkout.crm_event_failed",
+                message="No se pudo notificar el pago confirmado al CRM",
+                payment_id=str(payment.id),
+                error=str(exc),
+            )

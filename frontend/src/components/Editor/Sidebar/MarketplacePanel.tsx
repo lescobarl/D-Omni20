@@ -12,7 +12,7 @@
  *   accesible (`role="status"` / `role="alert"`).
  */
 import { useEffect, type ReactElement } from 'react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStoreContext } from '@/store/editorStoreContext';
 import { useMarketplaceStore } from '@/store/marketplaceStore';
 
 /** Formatea el número de descargas de forma localizada. */
@@ -25,6 +25,7 @@ function formatDownloads(downloads: number): string {
  * @returns El panel con el filtro de categorías y las tarjetas del catálogo.
  */
 export function MarketplacePanel(): ReactElement {
+  const store = useEditorStoreContext();
   const templates = useMarketplaceStore((state) => state.templates);
   const status = useMarketplaceStore((state) => state.status);
   const error = useMarketplaceStore((state) => state.error);
@@ -36,7 +37,7 @@ export function MarketplacePanel(): ReactElement {
   const fetchTemplates = useMarketplaceStore((state) => state.fetchTemplates);
   const setCategory = useMarketplaceStore((state) => state.setCategory);
   const importTemplate = useMarketplaceStore((state) => state.importTemplate);
-  const campaignId = useEditorStore((state) => state.landing.campaignId);
+  const campaignId = store((state) => state.landing.campaignId);
 
   useEffect(() => {
     void fetchTemplates();

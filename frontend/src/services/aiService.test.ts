@@ -7,39 +7,9 @@
  * - `createAiService` expone una implementación lista para el composition root.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { IApiClient } from '@/api/client';
 import type { IAiGenerationResponse } from '@/api/types';
 import { BackendAiService, createAiService } from '@/services/aiService';
-
-function makeApiClientMock(): IApiClient {
-  return {
-    health: vi.fn(),
-    listLandings: vi.fn(),
-    getLanding: vi.fn(),
-    createLanding: vi.fn(),
-    updateLanding: vi.fn(),
-    deleteLanding: vi.fn(),
-    publishLanding: vi.fn(),
-    compileLanding: vi.fn(),
-    generateLanding: vi.fn(),
-    generateSchema: vi.fn(),
-    listSchemas: vi.fn(),
-    validateSchema: vi.fn(),
-    listSchemaVersions: vi.fn(),
-    createSchemaVersion: vi.fn(),
-    createCheckout: vi.fn(),
-    confirmCheckout: vi.fn(),
-    captureLead: vi.fn(),
-    generateQuote: vi.fn(),
-    scheduleAppointment: vi.fn(),
-    listMarketplaceTemplates: vi.fn(),
-    createMarketplaceTemplate: vi.fn(),
-    importMarketplaceTemplate: vi.fn(),
-    recordAnalyticsEvent: vi.fn(),
-    getAnalyticsDashboard: vi.fn(),
-    deployToCdn: vi.fn(),
-  };
-}
+import { makeApiClientMock } from '@/test/apiClientMocks';
 
 function makeResponse(overrides: Partial<IAiGenerationResponse> = {}): IAiGenerationResponse {
   return {

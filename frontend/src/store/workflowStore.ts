@@ -15,6 +15,7 @@ import { AppError } from '@/lib/errors';
 import type {
   IAppointmentResponse,
   ICheckoutResponse,
+  ILeadAttributionRead,
   ILeadRead,
   IPaymentRead,
   IQuoteResponse,
@@ -104,6 +105,12 @@ export interface IWorkflowState {
   quote: IWorkflowSubmission<IQuoteResponse>;
   /** Cola del agendador de citas. */
   appointment: IWorkflowSubmission<IAppointmentResponse>;
+  /** Reporte de atribución por campaña del tenant activo (o `null`). */
+  attribution: ILeadAttributionRead | null;
+  /** Estado de la carga del reporte de atribución. */
+  attributionStatus: WorkflowStatus;
+  /** Mensaje del último error de atribución (o `null`). */
+  attributionError: string | null;
   /** Selecciona el tipo de workflow de la landing. */
   setWorkflowType(workflowType: WorkflowType): void;
   /** Ejecuta un checkout directo en la pasarela. */
@@ -116,6 +123,8 @@ export interface IWorkflowState {
   submitQuote(input: IQuoteInput): Promise<IQuoteResponse | null>;
   /** Ejecuta el agendamiento de una cita. */
   submitAppointment(input: IAppointmentInput): Promise<IAppointmentResponse | null>;
+  /** Carga el reporte de atribución por campaña del tenant activo. */
+  loadAttribution(): Promise<ILeadAttributionRead | null>;
   /** Limpia la cola de envío de un workflow concreto. */
   resetSubmission(workflowType: WorkflowType): void;
   /** Reinicia el workflow al valor por defecto y limpia todas las colas. */
@@ -148,6 +157,9 @@ export const useWorkflowStore = create<IWorkflowState>()((set) => ({
   lead: emptySubmission<ILeadRead>(),
   quote: emptySubmission<IQuoteResponse>(),
   appointment: emptySubmission<IAppointmentResponse>(),
+  attribution: null,
+  attributionStatus: 'idle',
+  attributionError: null,
 
   setWorkflowType: (workflowType) => set({ workflowType }),
 
@@ -273,6 +285,29 @@ export const useWorkflowStore = create<IWorkflowState>()((set) => ({
     }
   },
 
+  loadAttribution: async () => {
+    set({ attributionStatus: 'loading', attributionError: null });
+    const service = getWorkflowService();
+    if (service === null) {
+      set({
+        attributionStatus: 'error',
+        attributionError: 'El módulo de workflows no está disponible.',
+      });
+      return null;
+    }
+    try {
+      const report = await service.getLeadAttribution();
+      set({ attribution: report, attributionStatus: 'success' });
+      return report;
+    } catch (error) {
+      set({
+        attributionStatus: 'error',
+        attributionError: extractWorkflowError(error, 'No se pudo cargar la atribución.'),
+      });
+      return null;
+    }
+  },
+
   resetSubmission: (workflowType) => {
     const key = submissionKeyFor(workflowType);
     if (key === 'checkout') {
@@ -293,5 +328,8 @@ export const useWorkflowStore = create<IWorkflowState>()((set) => ({
       lead: emptySubmission<ILeadRead>(),
       quote: emptySubmission<IQuoteResponse>(),
       appointment: emptySubmission<IAppointmentResponse>(),
+      attribution: null,
+      attributionStatus: 'idle',
+      attributionError: null,
     }),
 }));
