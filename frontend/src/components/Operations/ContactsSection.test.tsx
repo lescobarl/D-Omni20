@@ -23,7 +23,9 @@ describe('ContactsSection', () => {
   });
 
   afterEach(() => {
-    useOperationsStore.getState().reset();
+    act(() => {
+      useOperationsStore.getState().reset();
+    });
     setOperationsService(null);
   });
 
@@ -71,14 +73,17 @@ describe('ContactsSection', () => {
     render(<ContactsSection />);
 
     await screen.findByText('Aún no hay contactos en el directorio.');
-    await user.type(screen.getByLabelText('Teléfono'), '+529998887766');
-    await user.type(screen.getByLabelText('Nombre'), 'Luis Pérez');
-    await user.type(screen.getByLabelText('Correo'), 'luis@example.com');
-    await user.type(screen.getByLabelText('Etiquetas'), 'ventas, vip');
-    await user.type(screen.getByLabelText('Id externo'), 'wa:529998887766');
 
     await act(async () => {
+      await user.type(screen.getByLabelText('Teléfono'), '+529998887766');
+      await user.type(screen.getByLabelText('Nombre'), 'Luis Pérez');
+      await user.type(screen.getByLabelText('Correo'), 'luis@example.com');
+      await user.type(screen.getByLabelText('Etiquetas'), 'ventas, vip');
+      await user.type(screen.getByLabelText('Id externo'), 'wa:529998887766');
       await user.click(screen.getByRole('button', { name: 'Crear contacto' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createContact).toHaveBeenCalledWith({
@@ -130,13 +135,15 @@ describe('ContactsSection', () => {
     expect(screen.getByLabelText('Estado')).toHaveValue('new');
     expect(screen.getByLabelText('Origen')).toHaveValue('manual');
 
-    await user.clear(screen.getByLabelText('Teléfono'));
-    await user.type(screen.getByLabelText('Teléfono'), '+529998887766');
-    await user.clear(screen.getByLabelText('Nombre'));
-    await user.type(screen.getByLabelText('Nombre'), 'Luis Pérez');
-
     await act(async () => {
+      await user.clear(screen.getByLabelText('Teléfono'));
+      await user.type(screen.getByLabelText('Teléfono'), '+529998887766');
+      await user.clear(screen.getByLabelText('Nombre'));
+      await user.type(screen.getByLabelText('Nombre'), 'Luis Pérez');
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.updateContact).toHaveBeenCalledWith('51111111-1111-4111-8111-111111111111', {

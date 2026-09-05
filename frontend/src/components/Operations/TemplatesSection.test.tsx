@@ -23,7 +23,9 @@ describe('TemplatesSection', () => {
   });
 
   afterEach(() => {
-    useOperationsStore.getState().reset();
+    act(() => {
+      useOperationsStore.getState().reset();
+    });
     setOperationsService(null);
   });
 
@@ -70,13 +72,16 @@ describe('TemplatesSection', () => {
     render(<TemplatesSection />);
 
     await screen.findByText('Aún no hay plantillas de mensaje.');
-    await user.type(screen.getByLabelText('Nombre'), 'Promo');
-    await user.click(screen.getByLabelText('Cuerpo'));
-    await user.paste('Hola {{nombre}}, 20% off.');
-    await user.type(screen.getByLabelText('Variables'), 'nombre');
 
     await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'Promo');
+      await user.click(screen.getByLabelText('Cuerpo'));
+      await user.paste('Hola {{nombre}}, 20% off.');
+      await user.type(screen.getByLabelText('Variables'), 'nombre');
       await user.click(screen.getByRole('button', { name: 'Crear plantilla' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createTemplate).toHaveBeenCalledWith({
@@ -122,11 +127,13 @@ describe('TemplatesSection', () => {
     expect(screen.getByLabelText('Tipo')).toHaveValue('text');
     expect(screen.getByLabelText('Variables')).toHaveValue('nombre');
 
-    await user.clear(screen.getByLabelText('Nombre'));
-    await user.type(screen.getByLabelText('Nombre'), 'Promo de bienvenida');
-
     await act(async () => {
+      await user.clear(screen.getByLabelText('Nombre'));
+      await user.type(screen.getByLabelText('Nombre'), 'Promo de bienvenida');
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.updateTemplate).toHaveBeenCalledWith('52222222-2222-4222-8222-222222222222', {

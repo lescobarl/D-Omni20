@@ -38,7 +38,9 @@ describe('CampaignsSection', () => {
   });
 
   afterEach(() => {
-    useOperationsStore.getState().reset();
+    act(() => {
+      useOperationsStore.getState().reset();
+    });
     setOperationsService(null);
     setLandingService(null);
   });
@@ -87,13 +89,16 @@ describe('CampaignsSection', () => {
     render(<CampaignsSection config={createTestConfig()} />);
 
     await screen.findByText('Aún no hay campañas de envío.');
-    await user.type(screen.getByLabelText('Nombre'), 'Campaña de ventas');
-    await user.type(screen.getByLabelText('Plantilla'), '61111111-1111-4111-8111-111111111111');
-    await user.selectOptions(screen.getByLabelText('Estado'), 'scheduled');
-    await user.type(screen.getByLabelText('Programación'), '2026-08-20T10:00:00Z');
 
     await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'Campaña de ventas');
+      await user.type(screen.getByLabelText('Plantilla'), '61111111-1111-4111-8111-111111111111');
+      await user.selectOptions(screen.getByLabelText('Estado'), 'scheduled');
+      await user.type(screen.getByLabelText('Programación'), '2026-08-20T10:00:00Z');
       await user.click(screen.getByRole('button', { name: 'Crear campaña' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createCampaign).toHaveBeenCalledWith({
@@ -145,11 +150,13 @@ describe('CampaignsSection', () => {
     expect(screen.getByLabelText('Segmentación')).toHaveValue('');
     expect(screen.getByLabelText('Disparo')).toHaveValue('');
 
-    await user.clear(screen.getByLabelText('Nombre'));
-    await user.type(screen.getByLabelText('Nombre'), 'Campaña de bienvenida actualizada');
-
     await act(async () => {
+      await user.clear(screen.getByLabelText('Nombre'));
+      await user.type(screen.getByLabelText('Nombre'), 'Campaña de bienvenida actualizada');
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.updateCampaign).toHaveBeenCalledWith('54444444-4444-4444-8444-444444444444', {
@@ -183,17 +190,20 @@ describe('CampaignsSection', () => {
     render(<CampaignsSection config={createTestConfig()} />);
 
     await screen.findByText('Aún no hay campañas de envío.');
-    await user.type(screen.getByLabelText('Nombre'), 'Campaña de recompra');
-    await user.selectOptions(screen.getByLabelText('Segmentación'), 'tags');
-    await user.type(
-      screen.getByLabelText('Etiquetas de contacto (separadas por coma)'),
-      'cliente, vip',
-    );
-    await user.selectOptions(screen.getByLabelText('Disparo'), 'event');
-    await user.selectOptions(screen.getByLabelText('Evento de disparo'), 'checkout.created');
 
     await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'Campaña de recompra');
+      await user.selectOptions(screen.getByLabelText('Segmentación'), 'tags');
+      await user.type(
+        screen.getByLabelText('Etiquetas de contacto (separadas por coma)'),
+        'cliente, vip',
+      );
+      await user.selectOptions(screen.getByLabelText('Disparo'), 'event');
+      await user.selectOptions(screen.getByLabelText('Evento de disparo'), 'checkout.created');
       await user.click(screen.getByRole('button', { name: 'Crear campaña' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createCampaign).toHaveBeenCalledWith({
@@ -313,9 +323,7 @@ describe('CampaignsSection', () => {
         await userEvent.setup().click(screen.getByRole('button', { name: 'Destinatarios' }));
       });
 
-      expect(
-        screen.queryByText('Envío masivo sobre archivos existentes'),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Envío masivo sobre archivos existentes')).not.toBeInTheDocument();
       expect(service.listRecipientFiles).not.toHaveBeenCalled();
     });
 
@@ -360,7 +368,9 @@ describe('CampaignsSection', () => {
         await user.click(screen.getByRole('button', { name: 'Vista previa de contactos' }));
       });
 
-      expect(await screen.findByText('Vista previa: clientes-ventas.csv (2 contactos)')).toBeInTheDocument();
+      expect(
+        await screen.findByText('Vista previa: clientes-ventas.csv (2 contactos)'),
+      ).toBeInTheDocument();
       expect(screen.getByText('+521234567890')).toBeInTheDocument();
       expect(screen.getByText('Ana García')).toBeInTheDocument();
       expect(screen.getByText('+521198765432')).toBeInTheDocument();
@@ -414,12 +424,15 @@ describe('CampaignsSection', () => {
       });
       await screen.findByText('Envío masivo sobre archivos existentes');
 
-      await user.type(
-        screen.getByPlaceholderText(/phone,name\s+5215512345678,Ana García/),
-        '5215512345678,Ana García',
-      );
       await act(async () => {
+        await user.type(
+          screen.getByPlaceholderText(/phone,name\s+5215512345678,Ana García/),
+          '5215512345678,Ana García',
+        );
         await user.click(screen.getByRole('button', { name: 'Guardar archivo' }));
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
       });
 
       expect(service.uploadRecipientFile).toHaveBeenCalledWith(
@@ -489,11 +502,13 @@ describe('CampaignsSection', () => {
       expect(screen.getByRole('option', { name: 'Landing Recompra Verano' })).toBeInTheDocument();
       expect(select).toHaveValue('');
 
-      await user.type(screen.getByLabelText('Nombre'), 'Campaña de recompra');
-      await user.selectOptions(select, landing.id);
-
       await act(async () => {
+        await user.type(screen.getByLabelText('Nombre'), 'Campaña de recompra');
+        await user.selectOptions(select, landing.id);
         await user.click(screen.getByRole('button', { name: 'Crear campaña' }));
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
       });
 
       // El payload envía el landingId de la landing/pasarela seleccionada.

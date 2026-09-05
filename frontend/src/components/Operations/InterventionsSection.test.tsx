@@ -28,7 +28,13 @@ describe('InterventionsSection', () => {
   });
 
   afterEach(() => {
-    useOperationsStore.getState().reset();
+    // El reset del store se envuelve en act: si el componente sigue montado
+    // (RTL desmonta en su propio afterEach, que corre DESPUÉS de este), el
+    // cambio de estado dispara un re-render fuera de act y genera el warning
+    // "not wrapped in act(...)". Envolverlo en act lo elimina.
+    act(() => {
+      useOperationsStore.getState().reset();
+    });
     setOperationsService(null);
   });
 
@@ -80,14 +86,24 @@ describe('InterventionsSection', () => {
     render(<InterventionsSection />);
 
     await screen.findByText('Aún no hay intervenciones en la cola.');
-    await user.type(screen.getByLabelText('Conversación'), '88888888-8888-4888-8888-888888888888');
-    await user.selectOptions(screen.getByLabelText('Estado'), 'assigned');
-    await user.type(screen.getByLabelText('Operador'), 'Ana Operadora');
-    await user.type(screen.getByLabelText('Notas'), 'Cliente requiere seguimiento.');
-    await user.type(screen.getByLabelText('Asignación'), '2026-08-19T10:00:00Z');
-
+    // Todas las interacciones de usuario (typing + click) van DENTRO de un único
+    // act scope: cada tecla en un input controlado dispara setField -> re-render,
+    // y si ocurre fuera de act genera el warning "not wrapped in act(...)".
     await act(async () => {
+      await user.type(
+        screen.getByLabelText('Conversación'),
+        '88888888-8888-4888-8888-888888888888',
+      );
+      await user.selectOptions(screen.getByLabelText('Estado'), 'assigned');
+      await user.type(screen.getByLabelText('Operador'), 'Ana Operadora');
+      await user.type(screen.getByLabelText('Notas'), 'Cliente requiere seguimiento.');
+      await user.type(screen.getByLabelText('Asignación'), '2026-08-19T10:00:00Z');
       await user.click(screen.getByRole('button', { name: 'Crear intervención' }));
+      // Drena la cola de microtareas dentro del act scope para que la resolución
+      // async del store (set post-await) y el resetForm() ocurran dentro de act.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createIntervention).toHaveBeenCalledWith({
@@ -138,11 +154,15 @@ describe('InterventionsSection', () => {
     expect(screen.getByLabelText('Asignación')).toHaveValue('');
     expect(screen.getByLabelText('Resolución')).toHaveValue('');
 
-    await user.clear(screen.getByLabelText('Conversación'));
-    await user.type(screen.getByLabelText('Conversación'), '99999999-9999-4999-8999-999999999999');
-    await user.selectOptions(screen.getByLabelText('Estado'), 'resolved');
-
+    // Todas las interacciones (clear + typing + select + click) dentro de un único
+    // act scope para evitar warnings "not wrapped in act(...)".
     await act(async () => {
+      await user.clear(screen.getByLabelText('Conversación'));
+      await user.type(
+        screen.getByLabelText('Conversación'),
+        '99999999-9999-4999-8999-999999999999',
+      );
+      await user.selectOptions(screen.getByLabelText('Estado'), 'resolved');
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
     });
 
@@ -267,8 +287,8 @@ describe('InterventionsSection', () => {
       await user.click(screen.getByRole('button', { name: 'Atender' }));
     });
 
-    await user.type(screen.getByLabelText('Asignar operador'), 'María González');
     await act(async () => {
+      await user.type(screen.getByLabelText('Asignar operador'), 'María González');
       await user.click(screen.getByRole('button', { name: 'Asignar' }));
     });
 
@@ -292,8 +312,8 @@ describe('InterventionsSection', () => {
       await user.click(screen.getByRole('button', { name: 'Atender' }));
     });
 
-    await user.type(screen.getByLabelText('Responder al cliente'), 'Estoy revisando tu caso');
     await act(async () => {
+      await user.type(screen.getByLabelText('Responder al cliente'), 'Estoy revisando tu caso');
       await user.click(screen.getByRole('button', { name: 'Enviar respuesta' }));
     });
 

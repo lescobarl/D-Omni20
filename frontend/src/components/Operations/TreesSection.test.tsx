@@ -24,7 +24,9 @@ describe('TreesSection', () => {
   });
 
   afterEach(() => {
-    useOperationsStore.getState().reset();
+    act(() => {
+      useOperationsStore.getState().reset();
+    });
     setOperationsService(null);
   });
 
@@ -73,12 +75,15 @@ describe('TreesSection', () => {
     render(<TreesSection />);
 
     await screen.findByText('Aún no hay árboles de navegación.');
-    await user.type(screen.getByLabelText('Nombre'), 'Menú de ventas');
-    await user.click(screen.getByLabelText('Opciones'));
-    await user.paste('saludar: Saludar\ncomprar: Comprar');
 
     await act(async () => {
+      await user.type(screen.getByLabelText('Nombre'), 'Menú de ventas');
+      await user.click(screen.getByLabelText('Opciones'));
+      await user.paste('saludar: Saludar\ncomprar: Comprar');
       await user.click(screen.getByRole('button', { name: 'Crear árbol' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.createNavigationTree).toHaveBeenCalledWith({
@@ -124,11 +129,13 @@ describe('TreesSection', () => {
     expect(screen.getByLabelText('Nombre')).toHaveValue('Menú principal');
     expect(screen.getByLabelText('Opciones')).toHaveValue('saludar: Saludar\ncomprar: Comprar');
 
-    await user.clear(screen.getByLabelText('Nombre'));
-    await user.type(screen.getByLabelText('Nombre'), 'Menú principal actualizado');
-
     await act(async () => {
+      await user.clear(screen.getByLabelText('Nombre'));
+      await user.type(screen.getByLabelText('Nombre'), 'Menú principal actualizado');
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(service.updateNavigationTree).toHaveBeenCalledWith(
