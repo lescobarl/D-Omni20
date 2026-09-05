@@ -34,6 +34,27 @@ para cierres de hito y el gate pre-commit.
 
 ---
 
+## Regla de commit por iteración
+
+**Objetivo**: no acumular cambios sin commitear. Cada iteración de trabajo se
+commitea **en cuanto queda en verde** (sus tests pasan), de forma incremental y
+atómica.
+
+### Reglas inmutables
+
+1. Al terminar una iteración (una tarea o un cambio coherente), correr sus tests:
+   `npm run test:file <ruta>` o `npm test` (solo lo cambiado).
+2. Si quedan **en verde**, commitear de inmediato con un mensaje descriptivo y
+   atómico (una iteración = un commit). No esperar a acumular más cambios.
+3. Si quedan **en rojo**, NO commitear: corregir hasta que pasen y recién ahí commitear.
+4. Evitar commits masivos de consolidación: son la excepción, no la regla. El
+   flujo normal es commit pequeño y frecuente por iteración verde.
+5. El commit dispara el gate pre-commit (`npm run test:full`). Si lint-staged
+   falla por límite de longitud de línea en Windows (muchos archivos a la vez),
+   es señal de que la iteración es demasiado grande: dividirla en commits menores.
+
+---
+
 **Última actualización**: 2026-09-05
-**Versión del documento**: 1.0
+**Versión del documento**: 1.1
 **Estado**: Reglas operativas del repositorio OmniBotIA Studio
