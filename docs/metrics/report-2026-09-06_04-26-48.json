@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-09-06T04:26:48.617Z",
+  "thresholds": {
+    "statements": 80,
+    "lines": 80,
+    "branches": 80,
+    "functions": 80
+  },
+  "compliance_score": 90.3,
+  "frontend_coverage": {
+    "summary": {
+      "statements": {
+        "total": 20505,
+        "covered": 17533,
+        "pct": 85.5
+      },
+      "lines": {
+        "total": 20505,
+        "covered": 17533,
+        "pct": 85.5
+      },
+      "branches": {
+        "total": 4466,
+        "covered": 3746,
+        "pct": 83.87
+      },
+      "functions": {
+        "total": 1344,
+        "covered": 1077,
+        "pct": 80.13
+      }
+    },
+    "failed": false,
+    "detail": ""
+  },
+  "validators": [
+    {
+      "id": "hardcode",
+      "description": "Sin valores hardcodeados",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "trycatch",
+      "description": "Sin try-catch vacíos",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "jsdoc",
+      "description": "JSDoc completo en componentes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "format",
+      "description": "Formato Prettier consistente",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "build": {
+    "ok": true,
+    "detail": ""
+  },
+  "backend": {
+    "ok": true,
+    "totalPct": 93,
+    "detail": ""
+  }
+}

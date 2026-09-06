@@ -45,6 +45,9 @@ function run(cmd, args, cwd) {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      // El reporte de cobertura (texto) supera el buffer por defecto (1 MB) y
+      // mataría el proceso; se amplía para que vitest termine y genere el JSON.
+      maxBuffer: 64 * 1024 * 1024,
       // En Windows, los shims `.cmd` (p.ej. `npx.cmd`) requieren ejecutarse a
       // través del shell (cmd.exe); sin `shell: true` fallan con
       // `spawnSync ... EINVAL` y toda la suite reporta error.
@@ -78,7 +81,14 @@ function npmCommand() {
 function runFrontendCoverage() {
   const result = run(
     npxCommand(),
-    ['vitest', 'run', '--coverage', '--coverage.reporter=json-summary', '--coverage.reporter=text'],
+    [
+      'vitest',
+      'run',
+      '--coverage',
+      '--coverage.reporter=json-summary',
+      '--coverage.reporter=text',
+      '--maxWorkers=2',
+    ],
     FRONTEND_DIR,
   );
   if (!result.ok) {

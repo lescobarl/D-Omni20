@@ -78,6 +78,88 @@ describe('portalStore', () => {
     expect(blocks[0].type).toBe('hero');
   });
 
+  it('addBlockAt inserta un bloque en la posición indicada', () => {
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+
+    usePortalStore.getState().addBlockAt(BLOCK_CATALOG[1], 0);
+
+    const types = usePortalStore.getState().landing.blocks.map((block) => block.block_id);
+    expect(types[0]).toBe(BLOCK_CATALOG[1].block_id);
+    expect(usePortalStore.getState().landing.blocks).toHaveLength(3);
+  });
+
+  it('removeBlock elimina el bloque y limpia la selección si apuntaba a él', () => {
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+    const instanceId = usePortalStore.getState().landing.blocks[0].instance_id;
+    usePortalStore.getState().selectBlock(instanceId);
+
+    usePortalStore.getState().removeBlock(instanceId);
+
+    const state = usePortalStore.getState();
+    expect(state.landing.blocks).toHaveLength(0);
+    expect(state.selectedBlockId).toBeNull();
+  });
+
+  it('selectBlock fija el bloque seleccionado', () => {
+    usePortalStore.getState().selectBlock('block-x');
+    expect(usePortalStore.getState().selectedBlockId).toBe('block-x');
+  });
+
+  it('moveBlock desplaza un bloque hacia arriba y respeta los límites', () => {
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[1]);
+    const [first, second] = usePortalStore
+      .getState()
+      .landing.blocks.map((block) => block.instance_id);
+
+    usePortalStore.getState().moveBlock(second, 'up');
+    expect(usePortalStore.getState().landing.blocks[0].instance_id).toBe(second);
+
+    usePortalStore.getState().moveBlock(second, 'up');
+    expect(usePortalStore.getState().landing.blocks[0].instance_id).toBe(second);
+
+    usePortalStore.getState().moveBlock(second, 'down');
+    expect(usePortalStore.getState().landing.blocks[1].instance_id).toBe(second);
+
+    usePortalStore.getState().moveBlock(first, 'down');
+    expect(usePortalStore.getState().landing.blocks[1].instance_id).toBe(first);
+  });
+
+  it('reorderBlock reordena dos bloques por instance_id', () => {
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[1]);
+    const [first, second] = usePortalStore
+      .getState()
+      .landing.blocks.map((block) => block.instance_id);
+
+    usePortalStore.getState().reorderBlock(first, second);
+
+    const ids = usePortalStore.getState().landing.blocks.map((block) => block.instance_id);
+    expect(ids).toEqual([second, first]);
+  });
+
+  it('updateBlockConfig fusiona el patch en la config del bloque', () => {
+    usePortalStore.getState().addBlock(BLOCK_CATALOG[0]);
+    const instanceId = usePortalStore.getState().landing.blocks[0].instance_id;
+
+    usePortalStore.getState().updateBlockConfig(instanceId, { title: 'Editado' });
+
+    const block = usePortalStore
+      .getState()
+      .landing.blocks.find((candidate) => candidate.instance_id === instanceId);
+    expect(block?.config).toMatchObject({ title: 'Editado' });
+  });
+
+  it('setLandingTitle y setWorkflowType actualizan el landing', () => {
+    usePortalStore.getState().setLandingTitle('Portal Renombrado');
+    usePortalStore.getState().setWorkflowType('direct_checkout');
+
+    const state = usePortalStore.getState();
+    expect(state.landing.title).toBe('Portal Renombrado');
+    expect(state.landing.workflowType).toBe('direct_checkout');
+  });
+
   it('serializa la configuración al formato dict del backend', () => {
     const serialized = serializePortalConfig(makeLanding());
 

@@ -76,14 +76,14 @@ completan la gestión de usuarios y roles.
 
 **Toda la hoja de ruta (Fases 1-10) está implementada y validada.**
 
-Métricas reales medidas el 2026-09-05 (reporte canónico en `docs/metrics/`):
+Métricas reales medidas el 2026-09-06 (reporte canónico en `docs/metrics/`,
+cumplimiento global **90.3/100**):
 
-- **Backend**: 68 archivos de test · **1250 tests** · **93.24%** coverage
+- **Backend**: 68 archivos de test · **1255 tests** · **93.25%** coverage
   (FastAPI hexagonal, DI, RLS, auditoría; umbral `pytest --cov-fail-under=80`).
-- **Frontend**: 98 archivos de test / **1172 tests** · coverage
-  **84.88 | 83.93 | 79.13 | 84.88** (statements | branches | functions | lines) ·
+- **Frontend**: 100 archivos de test / **1206 tests** · coverage
+  **85.5 | 83.87 | 80.13 | 85.5** (statements | branches | functions | lines) ·
   `tsc --noEmit` limpio y validadores CLAUDE (hardcode, trycatch, jsdoc, formato) en verde.
-  Nota: `functions` (79.13%) queda por debajo del umbral 80 de Vitest → deuda activa de tests.
 - **E2E**: Playwright — Chromium + Firefox + WebKit · 9 specs / 28 casos. La suite del
   configurador (`tenantConfig`) validada 15/15 en vivo contra el backend real (2026-09-05).
 

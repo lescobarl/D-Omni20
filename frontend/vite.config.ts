@@ -60,6 +60,9 @@ export default defineConfig({
   test: {
     globals: true,
     css: true,
+    // Timeout ampliado: bajo carga (workers/cobertura) algunos tests de UI de
+    // jsdom rozan los 5s por defecto y producían falsos negativos intermitentes.
+    testTimeout: 10000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
