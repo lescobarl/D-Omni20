@@ -15,6 +15,7 @@
  *   cita `scheduled`.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Constantes de contrato de la UI (nombres accesibles estables). */
 const RIGHT_PANEL_TABLIST = 'Panel derecho del editor';
@@ -51,6 +52,8 @@ test.describe('Workflows (E2E)', () => {
     // Estado limpio: evita que la persistencia de Zustand contamine los tests.
     await context.addInitScript(() => localStorage.clear());
     await page.goto('/');
+    // Login real (RBAC) para que el spec sea autocontenido en cualquier entorno.
+    await loginAs(page, 'admin');
     await openWorkflowsPanel(page);
   });
 

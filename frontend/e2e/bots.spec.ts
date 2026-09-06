@@ -15,6 +15,7 @@
  * - Identificadores únicos por ejecución (timestamp) porque el CRUD persiste en el backend.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Constantes de contrato de la UI (nombres accesibles estables). */
 const SETTINGS_TABLIST = 'Configuración del bot';
@@ -51,6 +52,9 @@ test.describe('Sección Bots/Conversaciones (E2E)', () => {
     // `domcontentloaded` evita flakes de `load` (recursos como Monaco/fuentes pueden
     // retrasar el evento `load`); las aserciones siguientes ya esperan elementos.
     await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Login real (RBAC) para que el spec sea autocontenido en cualquier entorno
+    // (la config local no inyecta `storageState` como sí hace la config de CI).
+    await loginAs(page, 'admin');
     await openSettings(page);
   });
 

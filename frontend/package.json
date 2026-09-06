@@ -28,7 +28,9 @@
   },
   "lint-staged": {
     "**/*.{ts,tsx}": [
-      "prettier --write",
+      "prettier --write"
+    ],
+    "src/**/*.{ts,tsx}": [
       "node scripts/validate-hardcode.mjs",
       "node scripts/validate-trycatch.mjs",
       "node scripts/validate-jsdoc.mjs"

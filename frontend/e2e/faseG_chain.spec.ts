@@ -37,6 +37,7 @@
  *     título de forma benigna y se vuelve a publicar (round-trip real).
  */
 import { expect, test, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Constantes de contrato de la UI (nombres accesibles estables). */
 const TENANT_SELECT = 'Tenant activo';
@@ -91,10 +92,11 @@ async function openOperationsTab(page: Page, tabName: string): Promise<void> {
 }
 
 test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () => {
-  test.beforeEach(async ({ context, page }) => {
-    // Estado limpio: evita que la persistencia de Zustand contamine los tests.
-    await context.addInitScript(() => localStorage.clear());
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+  test.beforeEach(async ({ page }) => {
+    // Login real (RBAC): la cadena opera el tenant `escobar`, visible para el
+    // super-admin (el admin de referencia solo tiene membresía en dev-tenant).
+    // Autocontenido sin `storageState` (funciona en local y en CI).
+    await loginAs(page, 'superadmin');
   });
 
   test('cadena completa: landing -> ads -> lead con contexto -> recompra (escobar)', async ({
@@ -122,7 +124,9 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
       // El editor se montó al cargar con dev-tenant. Alternamos a "Captación" y
       // volvemos para forzar el remontaje con el tenant escobar (sin recargar).
       await page.getByRole('button', { name: 'Captación' }).click();
-      await expect(page.getByRole('heading', { level: 2, name: 'Captación publicitaria' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Captación publicitaria' }),
+      ).toBeVisible();
       await page.getByRole('button', { name: 'Sitio' }).click();
 
       // La landing real debe estar disponible en el selector unificado del sitio
@@ -177,7 +181,9 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
     // ---------------------------------------------------------------------
     await test.step('PASO 3: crear campaña publicitaria (ads) hacia la landing real', async () => {
       await page.getByRole('button', { name: 'Captación' }).click();
-      await expect(page.getByRole('heading', { level: 2, name: 'Captación publicitaria' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Captación publicitaria' }),
+      ).toBeVisible();
 
       const form = page.getByRole('form', { name: 'Crear campaña' });
       await expect(form).toBeVisible();
@@ -249,14 +255,51 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
 
       // La landing real tiene campaign_id -> el lead queda atribuido por campaña.
       // La vista de atribución (LeadAttributionView) debe mostrar la fila de la campaña.
-      await expect(
-        leadPanel.getByText('Atribución por campaña (UTM)'),
-      ).toBeVisible();
+      await expect(leadPanel.getByText('Atribución por campaña (UTM)')).toBeVisible();
 
       await page.screenshot({
         path: `${EVIDENCE_DIR}/faseg-4-lead-contexto.png`,
         fullPage: true,
       });
+
+      // Cierre del eslabón ② por UTM (navegación real de anuncio): se captura un
+      // lead por HTTP con la firma UTM de la campaña recién creada (como haría la
+      // landing publicada con `?utm_campaign=...`) y la vista de atribución debe
+      // mostrar la fila de esa campaña tras recargar la vista.
+      const token = await page.evaluate(
+        () => localStorage.getItem('omnibotia-studio.access-token') ?? '',
+      );
+      const utmResponse = await page.request.post('http://127.0.0.1:8000/api/v1/workflows/lead', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Tenant-Id': 'escobar',
+          'Content-Type': 'application/json',
+        },
+        data: {
+          name: 'FaseG UTM Lead',
+          email: `faseg-utm-${stamp}@example.com`,
+          phone: '+52 55 0000 0001',
+          source: 'landing',
+          metadata: {
+            utm_source: 'meta',
+            utm_medium: 'cpc',
+            utm_campaign: `faseg-ui-${stamp}`,
+            utm_content: 'banner',
+            utm_term: 'lago',
+          },
+        },
+      });
+      expect(utmResponse.ok()).toBeTruthy();
+      const utmLead = await utmResponse.json();
+      expect(utmLead.ad_campaign_id).toBeTruthy();
+
+      // Reabre el workflow para remontar la vista de atribución (recarga el GET).
+      await openWorkflow(page, 'Checkout Directo');
+      await openWorkflow(page, 'Captura de Leads');
+      const utmPanel = page.getByRole('tabpanel', { name: 'Captura de Leads' });
+      await expect(utmPanel.getByText('Atribución por campaña (UTM)')).toBeVisible();
+      const campaignRow = utmPanel.locator('tbody tr', { hasText: `faseg-ui-${stamp}` });
+      await expect(campaignRow).toBeVisible();
     });
 
     // ---------------------------------------------------------------------
@@ -283,7 +326,9 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
 
       // La campaña aparece con la insignia "Origen: <landing real>".
       const campaignItem = panel.locator('li', { hasText: campaignName });
-      await expect(campaignItem.getByRole('heading', { level: 3, name: campaignName })).toBeVisible();
+      await expect(
+        campaignItem.getByRole('heading', { level: 3, name: campaignName }),
+      ).toBeVisible();
       await expect(campaignItem.getByText(`Origen: ${LANDING_NAME}`)).toBeVisible();
 
       await page.screenshot({
@@ -299,14 +344,18 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
       // Eliminar la campaña de recompra (Operación del bot -> Campañas).
       const panel = page.getByRole('tabpanel', { name: 'Campañas' });
       const campaignItem = panel.locator('li', { hasText: campaignName });
+      page.once('dialog', (dialog) => void dialog.accept());
       await campaignItem.getByRole('button', { name: 'Eliminar' }).click();
       await expect(panel.locator('li', { hasText: campaignName })).toHaveCount(0);
 
       // Eliminar la campaña publicitaria (Captación).
       await page.getByRole('button', { name: 'Sitio' }).click();
       await page.getByRole('button', { name: 'Captación' }).click();
-      await expect(page.getByRole('heading', { level: 2, name: 'Captación publicitaria' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Captación publicitaria' }),
+      ).toBeVisible();
       const adItem = page.locator('li', { hasText: adName });
+      page.once('dialog', (dialog) => void dialog.accept());
       await adItem.getByRole('button', { name: 'Eliminar' }).click();
       await expect(page.locator('li', { hasText: adName })).toHaveCount(0);
 

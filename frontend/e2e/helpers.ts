@@ -10,6 +10,7 @@
  * - admin:       tenantadmin@test.local / Password123!  (rol admin en dev-tenant)
  * - configurador: configurador@test.local / Password123! (rol configurador)
  * - operador:    operador@test.local / Password123!     (rol operador)
+ * - superadmin:  superadmin@test.local / Password123!   (control plane: ve/opera cualquier tenant)
  */
 import { expect, type Page } from '@playwright/test';
 
@@ -18,6 +19,7 @@ export const USERS = {
   admin: { email: 'tenantadmin@test.local', password: 'Password123!' },
   configurador: { email: 'configurador@test.local', password: 'Password123!' },
   operador: { email: 'operador@test.local', password: 'Password123!' },
+  superadmin: { email: 'superadmin@test.local', password: 'Password123!' },
 } as const;
 
 export type UserKey = keyof typeof USERS;
@@ -26,19 +28,19 @@ export type UserKey = keyof typeof USERS;
  * Inicia sesión en la UI con un usuario de referencia.
  *
  * Flujo:
- * 1. Limpia `localStorage` (estado limpio, sin sesión previa).
- * 2. Navega a `/` y espera la pantalla de login.
- * 3. Rellena email+contraseña y pulsa "Iniciar sesión".
- * 4. Espera a que el shell de la app quede visible (cabecera con el nav de áreas).
+ * 1. Navega a `/` (cada test usa un contexto nuevo, ya sin `localStorage`).
+ * 2. Espera la pantalla de login, rellena email+contraseña y pulsa "Iniciar sesión".
+ * 3. Espera a que el shell de la app quede visible (cabecera con el nav de áreas).
+ *
+ * NOTA: no se usa `addInitScript(localStorage.clear)` aquí: limpiaría el token en
+ * CADA navegación/reload y rompería los tests que recargan para verificar
+ * persistencia (la sesión vive en `localStorage` en entornos sin `storageState`).
  *
  * @param page   Página de Playwright.
  * @param user   Clave del usuario de referencia (admin | configurador | operador).
  */
 export async function loginAs(page: Page, user: UserKey): Promise<void> {
   const credentials = USERS[user];
-
-  // Estado limpio: sin token ni sesión previa.
-  await page.context().addInitScript(() => localStorage.clear());
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
