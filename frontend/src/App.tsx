@@ -5,9 +5,10 @@
  * - Recibe la configuración validada por inyección de dependencias.
  * - Muestra una cabecera con navegación persistente por áreas y el configurador
  *   unificado del sitio (landing + páginas del portal) como vista por defecto.
- * - La navegación sigue el flujo comercial intuitivo: Sitio (construir el sitio)
- *   → Captación (atraer tráfico) → Operación del bot (operar leads/campañas) →
- *   Configuración (ajustes técnicos) → Dominios (dominios personalizados).
+ * - La navegación sitúa la pestaña de configuración al FINAL de todas las
+ *   pestañas en todos los perfiles: Sitio (construir el sitio) → Captación
+ *   (atraer tráfico) → Operación del bot (operar leads/campañas) → Dominios
+ *   (dominios personalizados) → Configuración (ajustes técnicos) → Mi perfil.
  * - Cada área es un botón persistente con etiqueta estable: la activa se resalta
  *   y el resto permanece visible, de modo que nunca hay que "volver al editor"
  *   mediante un botón genérico: se navega directamente a la sección deseada.
@@ -154,12 +155,13 @@ export default function App({ config }: IAppProps): ReactElement {
     }
   }, [displayedTenantId]);
 
-  // Navegación persistente en el orden del flujo comercial intuitivo: primero se
-  // construye el sitio, luego se capta tráfico, el bot opera los leads, se ajusta
-  // la configuración técnica y, por último, se enlazan dominios personalizados.
-  // Cada entrada declara su área funcional RBAC; se filtra con `canAccessArea`
-  // (fail-closed: sin rol → sin acceso). «Usuarios» (control plane) y «Mi perfil»
-  // se añaden al final del flujo.
+  // Navegación persistente: primero se construye el sitio y se opera el flujo
+  // comercial (Captación / Operación), y la configuración técnica se sitúa al
+  // FINAL de todas las pestañas en todos los perfiles (las áreas de Dominios y
+  // Usuarios preceden a «Configuración», que es la última área funcional antes
+  // de «Mi perfil»). Cada entrada declara su área funcional RBAC; se filtra con
+  // `canAccessArea` (fail-closed: sin rol → sin acceso). «Usuarios» (control
+  // plane) y «Mi perfil» se añaden al final del flujo.
   const allNavItems: INavItem[] = [
     {
       view: 'editor',
@@ -190,17 +192,6 @@ export default function App({ config }: IAppProps): ReactElement {
           },
         ]
       : []),
-    ...(settingsEnabled
-      ? [
-          {
-            view: 'settings' as AppView,
-            label: 'Configuración',
-            subtitle: 'Configuración del bot',
-            announcement: 'Configuración del bot abierta',
-            area: 'tenantConfig' as RbacArea,
-          },
-        ]
-      : []),
     ...(hostsEnabled
       ? [
           {
@@ -220,6 +211,17 @@ export default function App({ config }: IAppProps): ReactElement {
             subtitle: 'Usuarios de la plataforma',
             announcement: 'Usuarios de la plataforma abierta',
             area: 'platformUsers' as RbacArea,
+          },
+        ]
+      : []),
+    ...(settingsEnabled
+      ? [
+          {
+            view: 'settings' as AppView,
+            label: 'Configuración',
+            subtitle: 'Configuración del bot',
+            announcement: 'Configuración del bot abierta',
+            area: 'tenantConfig' as RbacArea,
           },
         ]
       : []),
