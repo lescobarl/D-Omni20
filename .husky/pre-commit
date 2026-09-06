@@ -1,8 +1,11 @@
 #!/usr/bin/env sh
-# OmniBotIA Studio - pre-commit (monorepo: todo el tooling vive en frontend/)
+# OmniBotIA Studio - pre-commit (monorepo: tooling en frontend/)
 # husky v9 ejecuta los hooks desde la raíz del repo; aquí nos movemos a frontend/
+# Gate LIGERO por iteración: lint-staged + puerta de tipos.
+# La suite completa (`test:full`) corre en el pre-push (gate de entrega), NO en
+# cada commit: así un cambio verde se commitea rápido y la suite se valida una
+# sola vez al empujar.
 cd "$(dirname "$0")/../frontend" || exit 1
 npx lint-staged
-# Puerta de tipos por iteración (constraint #3): falla rápido antes de la suite completa.
+# Puerta de tipos por iteración (constraint #3): falla rápido antes de commitear.
 npm run typecheck
-npm run test:full

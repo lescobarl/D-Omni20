@@ -10,7 +10,9 @@
  *   (a) `npm test` deja de incluir `--changed` (iteración rápida = solo lo cambiado),
  *   (b) se elimina el script `test:full` (suite completa explícita),
  *   (c) el documento de reglas pierde menciones clave del protocolo
- *       (`--changed`, `test:full`, el nombre de este guard y el gate pre-commit con `test:full`).
+ *       (`--changed`, `test:full`, el nombre de este guard y el gate de entrega
+ *       con `test:full`). El gate de entrega es el **pre-push** (suite completa
+ *       una vez por push); el pre-commit es ligero (lint-staged + tipos).
  *
  * Nota: este guard corre en TODA ejecución de Vitest (incluida la iteración rápida),
  * por lo que debe ser instantáneo (solo lectura de 2 archivos, sin red ni DOM).
@@ -66,8 +68,9 @@ describe('Protocolo de Iteración Rápida (guard estructural)', () => {
     expect(doc, 'El doc de reglas debe mencionar `--changed`').toContain('--changed');
     expect(doc, 'El doc de reglas debe mencionar `test:full`').toContain('test:full');
     expect(doc, 'El doc de reglas debe mencionar el guard test').toContain('protocolGuard.test.ts');
-    expect(doc, 'El doc de reglas debe fijar el gate pre-commit con `test:full`').toMatch(
-      /pre-commit[^\n]*test:full|test:full[^\n]*pre-commit/i,
-    );
+    expect(
+      doc,
+      'El doc de reglas debe fijar el gate de entrega (pre-commit o pre-push) con `test:full`',
+    ).toMatch(/(?:pre-commit|pre-push)[^\n]*test:full|test:full[^\n]*(?:pre-commit|pre-push)/i);
   });
 });
