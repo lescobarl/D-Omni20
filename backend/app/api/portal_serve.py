@@ -171,6 +171,81 @@ _PAGE_TEMPLATE = """<!doctype html>
     [data-omni-portal] ul { margin: 0; padding-left: 18px; }
     [data-omni-portal] li { margin-bottom: 6px; }
     [data-omni-portal] .muted { color: var(--omni-muted); font-size: 0.9rem; }
+    /* Ajustes de look & feel del widget (minimalista, ejecutivo) */
+    [data-omni-portal] .omni-portal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    [data-omni-portal] .omni-portal-welcome {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--omni-text);
+    }
+    [data-omni-portal] ul { list-style: none; padding-left: 0; }
+    [data-omni-portal] li { margin-bottom: 8px; }
+    [data-omni-portal] .omni-portal-section {
+      margin: 18px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.78rem;
+      color: var(--omni-primary-dark);
+    }
+    [data-omni-portal] .omni-portal-empty {
+      color: var(--omni-muted);
+      font-size: 0.9rem;
+    }
+    [data-omni-portal] .omni-portal-link {
+      background: none;
+      border: 0;
+      padding: 0;
+      font-weight: 500;
+      color: var(--omni-primary-dark);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-size: 0.95rem;
+      text-align: left;
+    }
+    [data-omni-portal] .omni-portal-link:hover { background: none; color: var(--omni-primary); }
+    [data-omni-portal] .omni-portal-detail {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border: 1px dashed var(--omni-border);
+      border-radius: 8px;
+      background: var(--omni-card);
+      font-size: 0.9rem;
+    }
+    [data-omni-portal] .omni-portal-btn {
+      background: transparent;
+      color: var(--omni-primary-dark);
+      border: 1px solid var(--omni-border);
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    [data-omni-portal] .omni-portal-btn:hover {
+      background: var(--omni-primary);
+      border-color: var(--omni-primary);
+      color: #fff;
+    }
+    [data-omni-portal] .omni-portal-arco {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    [data-omni-portal] .omni-portal-danger {
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+    [data-omni-portal] .omni-portal-danger:hover {
+      background: #b91c1c;
+      border-color: #b91c1c;
+    }
   </style>
 </head>
 <body>
