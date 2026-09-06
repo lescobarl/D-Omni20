@@ -15,7 +15,11 @@ import { AIPanel } from '@/components/Editor/Sidebar/AIPanel';
 import { WORKFLOW_DEFINITIONS } from '@/core/workflows';
 import { setAiService, useAiStore } from '@/store/aiStore';
 import { useEditorStore } from '@/store/editorStore';
-import type { IAiGenerationResult, IAiService, IPortalGenerationResult } from '@/services/aiService';
+import type {
+  IAiGenerationResult,
+  IAiService,
+  IPortalGenerationResult,
+} from '@/services/aiService';
 import type { ILandingConfig } from '@/types/editor';
 
 const DEFAULT_LANDING: ILandingConfig = {
@@ -234,9 +238,7 @@ describe('AIPanel', () => {
 
   it('genera una página del portal en modo portal y permite aplicarla', async () => {
     const portalResult = makePortalResult();
-    const generatePortal = vi
-      .fn<IAiService['generatePortal']>()
-      .mockResolvedValue(portalResult);
+    const generatePortal = vi.fn<IAiService['generatePortal']>().mockResolvedValue(portalResult);
     setAiService({ generate: vi.fn(), generatePortal });
     const user = userEvent.setup();
 

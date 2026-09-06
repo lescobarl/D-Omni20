@@ -11,7 +11,12 @@
  * - Los errores del store se reflejan en `aria-live` accesibles por subsección.
  */
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import type { IAdCampaignRead, IBotProviderConfigRead, IConversationRead, IKeywordRead } from '@/api/types';
+import type {
+  IAdCampaignRead,
+  IBotProviderConfigRead,
+  IConversationRead,
+  IKeywordRead,
+} from '@/api/types';
 import type { IBotProviderInput, IKeywordInput } from '@/services/botService';
 import { useAdsStore } from '@/store/adsStore';
 import { useBotStore } from '@/store/botStore';

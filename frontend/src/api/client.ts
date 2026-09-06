@@ -275,7 +275,9 @@ export interface IApiClient {
   /** Publica o despublica una página del portal del tenant activo. */
   publishPortalPage(pageId: string, payload?: IPortalPagePublishRequest): Promise<IPortalPageRead>;
   /** Genera una página del portal con IA a partir de un prompt. */
-  generatePortalPage(payload: IPortalPageAiGenerationRequest): Promise<IPortalPageAiGenerationResponse>;
+  generatePortalPage(
+    payload: IPortalPageAiGenerationRequest,
+  ): Promise<IPortalPageAiGenerationResponse>;
   /** Genera un JSON Schema (Draft 2020-12) con IA a partir de un prompt. */
   generateSchema(payload: ISchemaGenerateRequest): Promise<ISchemaGenerateResponse>;
   /** Lista los JSON Schemas generados del tenant activo (paginado). */
@@ -867,10 +869,14 @@ export class HttpApiClient implements IApiClient {
   public async generatePortalPage(
     payload: IPortalPageAiGenerationRequest,
   ): Promise<IPortalPageAiGenerationResponse> {
-    return this.request<IPortalPageAiGenerationResponse>('POST', `${API_PATHS.portalPages}/generate`, {
-      operation: 'api.portalPage.generate',
-      body: payload,
-    });
+    return this.request<IPortalPageAiGenerationResponse>(
+      'POST',
+      `${API_PATHS.portalPages}/generate`,
+      {
+        operation: 'api.portalPage.generate',
+        body: payload,
+      },
+    );
   }
 
   /** Genera un JSON Schema (Draft 2020-12) con IA a partir de un prompt. */
@@ -2377,11 +2383,15 @@ export class HttpApiClient implements IApiClient {
 
   /** Añade una membresía (tenant+rol) a un usuario (sin cabecera de tenant). */
   public async addUserMembership(payload: IMembershipCreate): Promise<IMembershipRead> {
-    return this.request<IMembershipRead>('POST', `${API_PATHS.users}/${payload.user_id}/memberships`, {
-      operation: 'api.users.memberships.add',
-      tenant: false,
-      body: payload,
-    });
+    return this.request<IMembershipRead>(
+      'POST',
+      `${API_PATHS.users}/${payload.user_id}/memberships`,
+      {
+        operation: 'api.users.memberships.add',
+        tenant: false,
+        body: payload,
+      },
+    );
   }
 
   // ── Miembros por tenant (RBAC, admin) ─────────────────────────────────────

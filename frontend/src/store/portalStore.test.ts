@@ -123,15 +123,13 @@ describe('portalStore', () => {
 
     const serialized = usePortalStore.getState().toBackendBlocks();
     expect(serialized.title).toBe('Portal de Mi Empresa');
-    expect((serialized.blocks as Array<Record<string, unknown>>)).toHaveLength(1);
+    expect(serialized.blocks as Array<Record<string, unknown>>).toHaveLength(1);
   });
 
   it('applyBackendBlocks reemplaza la configuración desde el backend', () => {
     usePortalStore.getState().applyBackendBlocks({
       title: 'Portal del Backend',
-      blocks: [
-        { instance_id: 'x1', block_id: 'hero', type: 'hero', name: 'Hero', config: {} },
-      ],
+      blocks: [{ instance_id: 'x1', block_id: 'hero', type: 'hero', name: 'Hero', config: {} }],
     });
 
     const state = usePortalStore.getState();

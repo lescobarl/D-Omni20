@@ -50,7 +50,9 @@ describe('Protocolo de Iteración Rápida (guard estructural)', () => {
     const scripts = getScripts(readPackageJson());
     const testCmd = scripts['test'];
     expect(testCmd, 'El script "test" debe existir en package.json').toBeDefined();
-    expect(testCmd, '`npm test` debe incluir `--changed` para no correr toda la suite').toContain('--changed');
+    expect(testCmd, '`npm test` debe incluir `--changed` para no correr toda la suite').toContain(
+      '--changed',
+    );
   });
 
   it('existe `test:full` para ejecutar la suite completa de forma explícita', () => {
@@ -64,9 +66,8 @@ describe('Protocolo de Iteración Rápida (guard estructural)', () => {
     expect(doc, 'El doc de reglas debe mencionar `--changed`').toContain('--changed');
     expect(doc, 'El doc de reglas debe mencionar `test:full`').toContain('test:full');
     expect(doc, 'El doc de reglas debe mencionar el guard test').toContain('protocolGuard.test.ts');
-    expect(
-      doc,
-      'El doc de reglas debe fijar el gate pre-commit con `test:full`',
-    ).toMatch(/pre-commit[^\n]*test:full|test:full[^\n]*pre-commit/i);
+    expect(doc, 'El doc de reglas debe fijar el gate pre-commit con `test:full`').toMatch(
+      /pre-commit[^\n]*test:full|test:full[^\n]*pre-commit/i,
+    );
   });
 });

@@ -65,10 +65,7 @@ function makeMembership(overrides: Partial<IMembershipRead> = {}): IMembershipRe
 }
 
 /** Construye un servicio de usuarios con `list` devolviendo los usuarios dados. */
-function makeUserService(
-  users: IUserRead[],
-  overrides: Partial<IUserService> = {},
-): IUserService {
+function makeUserService(users: IUserRead[], overrides: Partial<IUserService> = {}): IUserService {
   return {
     list: vi.fn(async () => users),
     create: vi.fn(async () => {
@@ -120,8 +117,18 @@ describe('UsersSection', () => {
 
   it('lista los usuarios de plataforma con sus datos y badges', async () => {
     const users = [
-      makeUser({ id: 'user-1', email: 'admin@omni2.app', display_name: 'Admin', is_super_admin: true }),
-      makeUser({ id: 'user-2', email: 'user@omni2.app', display_name: 'Usuario', is_active: false }),
+      makeUser({
+        id: 'user-1',
+        email: 'admin@omni2.app',
+        display_name: 'Admin',
+        is_super_admin: true,
+      }),
+      makeUser({
+        id: 'user-2',
+        email: 'user@omni2.app',
+        display_name: 'Usuario',
+        is_active: false,
+      }),
     ];
     setUserService(makeUserService(users));
 

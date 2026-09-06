@@ -89,7 +89,10 @@ describe('AdsSection', () => {
     await user.type(screen.getByLabelText('UTM Término'), 'lago');
     await user.type(screen.getByLabelText('Presupuesto (centavos)'), '150000');
     await user.type(screen.getByLabelText('Notas'), 'Campaña de verano');
-    await user.selectOptions(screen.getByLabelText('Landing de destino'), 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    await user.selectOptions(
+      screen.getByLabelText('Landing de destino'),
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    );
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Crear campaña' }));
     });
@@ -176,8 +179,7 @@ describe('AdsSection', () => {
   it('edita una campaña existente precargando el formulario', async () => {
     const landing = makeLanding({ name: 'Landing Verano' });
     const service = makeAdsService({
-      listAdCampaigns: async () =>
-        makePage([makeAdCampaign({ landing_id: landing.id })]),
+      listAdCampaigns: async () => makePage([makeAdCampaign({ landing_id: landing.id })]),
       updateAdCampaign: vi.fn(async () => makeAdCampaign({ name: 'Verano 2026' })),
     });
     const landingService = makeLandingService({

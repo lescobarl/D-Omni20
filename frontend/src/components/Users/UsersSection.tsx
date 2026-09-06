@@ -34,16 +34,23 @@ const ROLE_OPTIONS: readonly IRole[] = ['admin', 'configurador', 'operador'];
 
 /** Formulario de creación/edición de usuario. */
 interface IUserForm {
+  /** Correo electrónico del usuario (identificador de acceso). */
   email: string;
+  /** Nombre visible del usuario. */
   displayName: string;
+  /** Contraseña de acceso (solo en creación). */
   password: string;
+  /** Indica si el usuario es super-admin de plataforma. */
   isSuperAdmin: boolean;
+  /** Indica si la cuenta está activa (login permitido). */
   isActive: boolean;
 }
 
 /** Formulario de nueva membresía (tenant + rol). */
 interface IMembershipForm {
+  /** UUID del tenant al que se asigna la membresía. */
   tenantId: string;
+  /** Rol del usuario dentro del tenant. */
   role: IRole;
 }
 
@@ -340,18 +347,13 @@ export function UsersSection(): ReactElement {
             ) : (
               <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
                 {filteredUsers.map((user) => (
-                  <li
-                    key={user.id}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
-                  >
+                  <li key={user.id} className="flex items-center justify-between gap-4 px-4 py-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium text-slate-900">
                           {user.display_name ?? user.email}
                         </span>
-                        {user.is_super_admin ? (
-                          <Badge tone="brand">Super-admin</Badge>
-                        ) : null}
+                        {user.is_super_admin ? <Badge tone="brand">Super-admin</Badge> : null}
                         {!user.is_active ? <Badge tone="danger">Inactivo</Badge> : null}
                       </div>
                       <p className="truncate text-sm text-slate-500">{user.email}</p>
@@ -384,11 +386,7 @@ export function UsersSection(): ReactElement {
 
       {/* Modal de creación de usuario */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Nuevo usuario">
-        <form
-          onSubmit={(event) => void handleCreate(event)}
-          noValidate
-          className="space-y-4"
-        >
+        <form onSubmit={(event) => void handleCreate(event)} noValidate className="space-y-4">
           <Input
             label="Correo electrónico"
             type="email"
@@ -434,11 +432,7 @@ export function UsersSection(): ReactElement {
 
       {/* Modal de edición de usuario */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Editar usuario">
-        <form
-          onSubmit={(event) => void handleUpdate(event)}
-          noValidate
-          className="space-y-4"
-        >
+        <form onSubmit={(event) => void handleUpdate(event)} noValidate className="space-y-4">
           <Input
             label="Correo electrónico"
             type="email"
@@ -514,9 +508,7 @@ export function UsersSection(): ReactElement {
                         className="flex items-center justify-between gap-3 px-3 py-2"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-900">
-                            {tenantId}
-                          </p>
+                          <p className="truncate text-sm font-medium text-slate-900">{tenantId}</p>
                           <Badge tone="sky">{ROLE_LABELS[role as IRole] ?? role}</Badge>
                         </div>
                         <Button

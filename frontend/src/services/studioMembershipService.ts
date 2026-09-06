@@ -8,11 +8,7 @@
  * - La fábrica `createMembershipService` es el punto de inyección (composition root).
  */
 import type { IApiClient } from '@/api/client';
-import type {
-  IMemberAddRequest,
-  IMembershipRead,
-  IMembershipUpdate,
-} from '@/api/types';
+import type { IMemberAddRequest, IMembershipRead, IMembershipUpdate } from '@/api/types';
 import type { ILogger } from '@/lib/logger';
 
 /** Contrato del servicio de miembros por tenant (RBAC, admin). */

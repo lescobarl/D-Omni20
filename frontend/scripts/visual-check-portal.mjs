@@ -59,7 +59,12 @@ for (const t of targets) {
     .locator('[data-omni-portal]')
     .innerHTML()
     .catch(() => '(no [data-omni-portal] en la página)');
-  const bodyText = (await page.locator('body').innerText().catch(() => '')).slice(0, 600);
+  const bodyText = (
+    await page
+      .locator('body')
+      .innerText()
+      .catch(() => '')
+  ).slice(0, 600);
 
   const shot = path.join(OUT_DIR, `${t.name}.png`);
   await page.screenshot({ path: shot, fullPage: true }).catch(() => {});

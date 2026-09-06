@@ -174,8 +174,22 @@ describe('App — puerta de autenticación y RBAC', () => {
     });
     setTenantService({
       list: async () => [
-        { id: 't-0', slug: 'test-tenant', name: 'Test Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant', created_at: '', revision: 0, updated_at: '' },
+        {
+          id: 't-0',
+          slug: 'test-tenant',
+          name: 'Test Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-1',
+          slug: 'dev-tenant',
+          name: 'Dev Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
       ],
       create: async () => {
         throw new Error('no usado en esta prueba');

@@ -141,7 +141,11 @@ describe('SiteEditor (configurador unificado del sitio)', () => {
         page_size: 100,
       }),
       get: vi.fn().mockResolvedValue(
-        makePortalPage({ id: 'portal-page-1', title: 'Portal de Mi Empresa', slug: 'mi-empresa' }),
+        makePortalPage({
+          id: 'portal-page-1',
+          title: 'Portal de Mi Empresa',
+          slug: 'mi-empresa',
+        }),
       ),
     });
     setLandingService(landingService);
@@ -166,7 +170,9 @@ describe('SiteEditor (configurador unificado del sitio)', () => {
     // La barra de identidad indica qué página se está editando (no se pierde uno).
     const identityBar = screen.getByText('Editando').parentElement;
     expect(identityBar).not.toBeNull();
-    expect(within(identityBar as HTMLElement).getByText('Portal de Mi Empresa')).toBeInTheDocument();
+    expect(
+      within(identityBar as HTMLElement).getByText('Portal de Mi Empresa'),
+    ).toBeInTheDocument();
     expect(within(identityBar as HTMLElement).getByText('/mi-empresa')).toBeInTheDocument();
     expect(portalService.get).toHaveBeenCalledWith('portal-page-1');
   });
@@ -181,7 +187,11 @@ describe('SiteEditor (configurador unificado del sitio)', () => {
         page_size: 100,
       }),
       get: vi.fn().mockResolvedValue(
-        makePortalPage({ id: 'portal-page-1', title: 'Portal de Mi Empresa', slug: 'mi-empresa' }),
+        makePortalPage({
+          id: 'portal-page-1',
+          title: 'Portal de Mi Empresa',
+          slug: 'mi-empresa',
+        }),
       ),
     });
     setLandingService(landingService);

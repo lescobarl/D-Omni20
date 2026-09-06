@@ -15,7 +15,9 @@ import { useAuthStore } from '@/store/authStore';
 
 /** Estado del formulario de inicio de sesión. */
 interface ILoginForm {
+  /** Correo electrónico del usuario. */
   email: string;
+  /** Contraseña del usuario. */
   password: string;
 }
 
@@ -72,11 +74,7 @@ export function LoginScreen(): ReactElement {
           Inicia sesión para acceder a tu cuenta.
         </p>
 
-        <form
-          noValidate
-          onSubmit={(event) => void handleSubmit(event)}
-          className="mt-6 space-y-4"
-        >
+        <form noValidate onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
           <Input
             id="login-email"
             label="Correo electrónico"

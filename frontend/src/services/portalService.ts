@@ -122,8 +122,14 @@ export class BackendPortalService implements IPortalService {
    * @param payload - Estado de publicación deseado.
    * @returns La página del portal con el estado de publicación actualizado.
    */
-  public async publish(pageId: string, payload: IPortalPagePublishRequest): Promise<IPortalPageRead> {
-    this.logger?.info(BackendPortalService.OPERATION_PUBLISH, { pageId, published: payload.published });
+  public async publish(
+    pageId: string,
+    payload: IPortalPagePublishRequest,
+  ): Promise<IPortalPageRead> {
+    this.logger?.info(BackendPortalService.OPERATION_PUBLISH, {
+      pageId,
+      published: payload.published,
+    });
     return this.apiClient.publishPortalPage(pageId, payload);
   }
 
@@ -132,8 +138,12 @@ export class BackendPortalService implements IPortalService {
    * @param payload - Prompt descriptivo y voz de marca opcional.
    * @returns La página del portal generada por el motor IA.
    */
-  public async generate(payload: IPortalPageAiGenerationRequest): Promise<IPortalPageAiGenerationResponse> {
-    this.logger?.info(BackendPortalService.OPERATION_GENERATE, { promptLength: payload.prompt.length });
+  public async generate(
+    payload: IPortalPageAiGenerationRequest,
+  ): Promise<IPortalPageAiGenerationResponse> {
+    this.logger?.info(BackendPortalService.OPERATION_GENERATE, {
+      promptLength: payload.prompt.length,
+    });
     return this.apiClient.generatePortalPage(payload);
   }
 }

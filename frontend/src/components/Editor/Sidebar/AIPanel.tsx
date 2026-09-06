@@ -94,9 +94,7 @@ export function AIPanel(): ReactElement {
             disabled={isGenerating}
             aria-pressed={isPortal}
             className={`rounded px-2 py-1 text-xs font-medium transition disabled:cursor-not-allowed ${
-              isPortal
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+              isPortal ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             Portal
@@ -152,11 +150,7 @@ export function AIPanel(): ReactElement {
           disabled={isGenerating || prompt.trim() === ''}
           className="w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {isGenerating
-            ? 'Generando…'
-            : isPortal
-              ? 'Generar página del portal'
-              : 'Generar landing'}
+          {isGenerating ? 'Generando…' : isPortal ? 'Generar página del portal' : 'Generar landing'}
         </button>
       </form>
 

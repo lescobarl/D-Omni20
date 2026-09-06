@@ -10,7 +10,11 @@
 import { create } from 'zustand';
 import { DEFAULT_WORKFLOW_TYPE } from '@/core/aiConfig';
 import { AppError } from '@/lib/errors';
-import type { IAiGenerationResult, IAiService, IPortalGenerationResult } from '@/services/aiService';
+import type {
+  IAiGenerationResult,
+  IAiService,
+  IPortalGenerationResult,
+} from '@/services/aiService';
 import type { WorkflowType } from '@/types/editor';
 
 /** Estado del flujo de generación IA. */

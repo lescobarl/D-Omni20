@@ -205,9 +205,7 @@ describe('ProfileSection', () => {
       await user.click(screen.getByRole('button', { name: 'Actualizar contraseña' }));
     });
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'La contraseña actual es obligatoria.',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('La contraseña actual es obligatoria.');
   });
 
   it('valida la longitud mínima de la nueva contraseña', async () => {

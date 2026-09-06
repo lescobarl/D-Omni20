@@ -58,7 +58,12 @@ try {
   pageErrors.push(`goto: ${String(e)}`);
 }
 
-const bodyText = (await page.locator('body').innerText().catch(() => '')).slice(0, 1200);
+const bodyText = (
+  await page
+    .locator('body')
+    .innerText()
+    .catch(() => '')
+).slice(0, 1200);
 
 // Indicadores clave
 const hasConnectError = /No se pudo conectar con el servidor/i.test(bodyText);

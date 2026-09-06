@@ -445,7 +445,9 @@ describe('MantenimientoBot', () => {
       screen.getByRole('button', { name: 'Ejecutar mantenimiento programado' }),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ejecutar mantenimiento programado' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Ejecutar mantenimiento programado' }),
+    );
 
     expect(service.runScheduledMaintenance).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId('scheduled-run-result')).toBeInTheDocument();

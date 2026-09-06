@@ -8,11 +8,7 @@
  * - `createPortalService` expone una implementación lista para el composition root.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type {
-  IPage,
-  IPortalPageAiGenerationResponse,
-  IPortalPageRead,
-} from '@/api/types';
+import type { IPage, IPortalPageAiGenerationResponse, IPortalPageRead } from '@/api/types';
 import { BackendPortalService, createPortalService } from '@/services/portalService';
 import { makeApiClientMock } from '@/test/apiClientMocks';
 
@@ -43,7 +39,9 @@ function makePageList(overrides: Partial<IPage<IPortalPageRead>> = {}): IPage<IP
   };
 }
 
-function makeGeneration(overrides: Partial<IPortalPageAiGenerationResponse> = {}): IPortalPageAiGenerationResponse {
+function makeGeneration(
+  overrides: Partial<IPortalPageAiGenerationResponse> = {},
+): IPortalPageAiGenerationResponse {
   return {
     slug: 'mi-empresa',
     title: 'Portal IA',
@@ -86,7 +84,11 @@ describe('BackendPortalService', () => {
     const apiClient = makeApiClientMock();
     (apiClient.createPortalPage as ReturnType<typeof vi.fn>).mockResolvedValue(makePage());
     const service = new BackendPortalService(apiClient);
-    const payload = { slug: 'mi-empresa', title: 'Portal', blocks: { title: 'Portal', blocks: [] } };
+    const payload = {
+      slug: 'mi-empresa',
+      title: 'Portal',
+      blocks: { title: 'Portal', blocks: [] },
+    };
 
     const result = await service.create(payload);
 

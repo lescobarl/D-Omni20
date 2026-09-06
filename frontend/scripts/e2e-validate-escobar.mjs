@@ -123,7 +123,12 @@ try {
   } catch (e) {
     pageErrors.push(`goto editor: ${String(e)}`);
   }
-  const bodyText1 = (await page.locator('body').innerText().catch(() => '')).slice(0, 1200);
+  const bodyText1 = (
+    await page
+      .locator('body')
+      .innerText()
+      .catch(() => '')
+  ).slice(0, 1200);
   const hasConnectError = /No se pudo conectar con el servidor/i.test(bodyText1);
   const tenantSelect = page.getByLabel(TENANT_SELECT);
   const tenantVisible = await tenantSelect.isVisible().catch(() => false);
@@ -135,7 +140,11 @@ try {
   // ---------------------------------------------------------------------------
   await tenantSelect.selectOption(ESCOBAR_SLUG);
   const tenantValue = await tenantSelect.inputValue().catch(() => '');
-  record('PASO 2: seleccionar tenant escobar', tenantValue === ESCOBAR_SLUG, `value=${tenantValue}`);
+  record(
+    'PASO 2: seleccionar tenant escobar',
+    tenantValue === ESCOBAR_SLUG,
+    `value=${tenantValue}`,
+  );
   await shot('2-tenant-escobar');
 
   // ---------------------------------------------------------------------------
@@ -190,7 +199,12 @@ try {
     landingStatus = resp ? resp.status() : null;
     landingFinalUrl = page.url();
     await page.waitForTimeout(2500);
-    const landingBody = (await page.locator('body').innerText().catch(() => '')).slice(0, 600);
+    const landingBody = (
+      await page
+        .locator('body')
+        .innerText()
+        .catch(() => '')
+    ).slice(0, 600);
     // La landing compilada renderiza contenido real (no una página de error).
     landingHasContent = landingBody.trim().length > 20 && !/Not Found|404/i.test(landingBody);
   } catch (e) {
@@ -217,7 +231,12 @@ try {
       .locator('[data-omni-portal]')
       .innerHTML()
       .catch(() => '');
-    const portalBody = (await page.locator('body').innerText().catch(() => '')).slice(0, 600);
+    const portalBody = (
+      await page
+        .locator('body')
+        .innerText()
+        .catch(() => '')
+    ).slice(0, 600);
     portalHasContent = portalHtml.length > 0 || portalBody.trim().length > 20;
   } catch (e) {
     pageErrors.push(`goto portal: ${String(e)}`);
@@ -258,7 +277,9 @@ try {
       (name) => {
         const sel = document.querySelector('#site-page-select');
         if (!sel || sel.disabled) return false;
-        return Array.from(sel.querySelectorAll('option')).some((o) => o.textContent && o.textContent.includes(name));
+        return Array.from(sel.querySelectorAll('option')).some(
+          (o) => o.textContent && o.textContent.includes(name),
+        );
       },
       landingName,
       { timeout: 15000 },
@@ -271,7 +292,11 @@ try {
     await siteSelect2.selectOption({ label: landingName });
     await waitForStatusText('cargada');
   }
-  record('PASO 7a: recargar la landing nueva en el editor', optionCount === 1, `options=${optionCount}`);
+  record(
+    'PASO 7a: recargar la landing nueva en el editor',
+    optionCount === 1,
+    `options=${optionCount}`,
+  );
 
   // Abrir el panel de Workflows y el workflow "Captura de Leads".
   await page

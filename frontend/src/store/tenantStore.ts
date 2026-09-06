@@ -115,8 +115,8 @@ export const useTenantStore = create<ITenantState>()((set, get) => ({
         (tenant) => tenant.id === currentId || tenant.slug === currentSlug,
       );
       const selected = stillExists
-        ? tenants.find((tenant) => tenant.id === currentId || tenant.slug === currentSlug) ??
-          tenants[0]
+        ? (tenants.find((tenant) => tenant.id === currentId || tenant.slug === currentSlug) ??
+          tenants[0])
         : tenants[0];
       const activeTenantId = selected?.slug ?? null;
       if (selected) {

@@ -297,9 +297,9 @@ describe('authStore', () => {
     });
     setAuthService(authService);
 
-    await expect(
-      useAuthStore.getState().changePassword('incorrecta', 'nueva1234'),
-    ).rejects.toThrow('La contraseña actual es incorrecta.');
+    await expect(useAuthStore.getState().changePassword('incorrecta', 'nueva1234')).rejects.toThrow(
+      'La contraseña actual es incorrecta.',
+    );
 
     const state = useAuthStore.getState();
     expect(state.status).toBe('error');
@@ -307,9 +307,9 @@ describe('authStore', () => {
   });
 
   it('changePassword degrada a error y lanza sin servicio registrado', async () => {
-    await expect(
-      useAuthStore.getState().changePassword('vieja', 'nueva1234'),
-    ).rejects.toThrow('El servicio de autenticación no está disponible.');
+    await expect(useAuthStore.getState().changePassword('vieja', 'nueva1234')).rejects.toThrow(
+      'El servicio de autenticación no está disponible.',
+    );
     expect(useAuthStore.getState().status).toBe('error');
   });
 

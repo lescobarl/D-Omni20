@@ -144,9 +144,7 @@ export function makeCampaignRecipient(
 }
 
 /** Construye un archivo de destinatarios reutilizable leído del backend (GAP 2). */
-export function makeRecipientFile(
-  overrides: Partial<IRecipientFileRead> = {},
-): IRecipientFileRead {
+export function makeRecipientFile(overrides: Partial<IRecipientFileRead> = {}): IRecipientFileRead {
   return {
     id: '57777777-7777-4777-8777-777777777777',
     tenant_id: 'tenant-1',

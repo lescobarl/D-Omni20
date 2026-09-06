@@ -608,9 +608,7 @@ export class BackendOperationsService implements IOperationsService {
   }
 
   /** Envía un mensaje individual a un teléfono reutilizando una plantilla del tenant (B.4). */
-  public async sendIndividualMessage(
-    input: IIndividualSendInput,
-  ): Promise<IMessageSendResultRead> {
+  public async sendIndividualMessage(input: IIndividualSendInput): Promise<IMessageSendResultRead> {
     this.logger?.debug('operations.messages.send-individual', { phone: input.phone });
     return this.apiClient.sendIndividualMessage(input);
   }

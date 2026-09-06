@@ -12,12 +12,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type {
-  IBlockDefinition,
-  IEditorState,
-  ILandingConfig,
-  WorkflowType,
-} from '@/types/editor';
+import type { IBlockDefinition, IEditorState, ILandingConfig, WorkflowType } from '@/types/editor';
 import { createBlockInstance } from '@/core/blocks';
 import type { IPortalService } from '@/services/portalService';
 import { uuidv4 } from '@/utils/uuid';
@@ -84,12 +79,15 @@ export function deserializePortalConfig(raw: Record<string, unknown>): ILandingC
   const title = typeof raw.title === 'string' ? raw.title : 'Nuevo Portal';
   const rawBlocks = Array.isArray(raw.blocks) ? raw.blocks : [];
   const blocks = rawBlocks
-    .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+    .filter(
+      (entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null,
+    )
     .map((entry) => ({
-      instance_id:
-        typeof entry.instance_id === 'string' ? entry.instance_id : uuidv4(),
+      instance_id: typeof entry.instance_id === 'string' ? entry.instance_id : uuidv4(),
       block_id: typeof entry.block_id === 'string' ? entry.block_id : 'hero',
-      type: (typeof entry.type === 'string' ? entry.type : 'hero') as ILandingConfig['blocks'][number]['type'],
+      type: (typeof entry.type === 'string'
+        ? entry.type
+        : 'hero') as ILandingConfig['blocks'][number]['type'],
       name: typeof entry.name === 'string' ? entry.name : 'Bloque',
       config:
         typeof entry.config === 'object' && entry.config !== null

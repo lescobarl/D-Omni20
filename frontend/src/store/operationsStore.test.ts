@@ -865,7 +865,9 @@ describe('operationsStore', () => {
   describe('tableStats', () => {
     it('carga las métricas por tabla del tenant', async () => {
       const tableStats = [makeTableStats(), makeTableStats({ table_name: 'bot_conversations' })];
-      const getTableStats = vi.fn<IOperationsService['getTableStats']>().mockResolvedValue(tableStats);
+      const getTableStats = vi
+        .fn<IOperationsService['getTableStats']>()
+        .mockResolvedValue(tableStats);
       setOperationsService(makeService({ getTableStats }));
 
       await useOperationsStore.getState().loadTableStats();
@@ -886,9 +888,7 @@ describe('operationsStore', () => {
     });
 
     it('degrade a error cuando el servicio falla', async () => {
-      const getTableStats = vi
-        .fn<IOperationsService['getTableStats']>()
-        .mockRejectedValue('fallo');
+      const getTableStats = vi.fn<IOperationsService['getTableStats']>().mockRejectedValue('fallo');
       setOperationsService(makeService({ getTableStats }));
 
       await useOperationsStore.getState().loadTableStats();

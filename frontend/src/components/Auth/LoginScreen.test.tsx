@@ -44,9 +44,7 @@ describe('LoginScreen', () => {
       await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
     });
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'El correo electrónico es obligatorio.',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('El correo electrónico es obligatorio.');
   });
 
   it('valida la contraseña obligatoria cuando el correo está presente', async () => {

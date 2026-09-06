@@ -11,7 +11,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAiService, useAiStore } from '@/store/aiStore';
 import { AppError } from '@/lib/errors';
-import type { IAiGenerationResult, IAiService, IPortalGenerationResult } from '@/services/aiService';
+import type {
+  IAiGenerationResult,
+  IAiService,
+  IPortalGenerationResult,
+} from '@/services/aiService';
 import type { ILandingConfig } from '@/types/editor';
 
 const DEFAULT_LANDING: ILandingConfig = {
@@ -232,9 +236,7 @@ describe('aiStore', () => {
 
   it('genera una página del portal llamando a generatePortal en modo portal', async () => {
     const portalResult = makePortalResult();
-    const generatePortal = vi
-      .fn<IAiService['generatePortal']>()
-      .mockResolvedValue(portalResult);
+    const generatePortal = vi.fn<IAiService['generatePortal']>().mockResolvedValue(portalResult);
     setAiService({ generate: vi.fn(), generatePortal });
 
     useAiStore.getState().setMode('portal');

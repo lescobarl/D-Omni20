@@ -12,7 +12,13 @@
  *   las membresías (tenant+rol) de un usuario concreto.
  */
 import { create } from 'zustand';
-import type { IMembershipCreate, IMembershipRead, IUserCreate, IUserRead, IUserUpdate } from '@/api/types';
+import type {
+  IMembershipCreate,
+  IMembershipRead,
+  IUserCreate,
+  IUserRead,
+  IUserUpdate,
+} from '@/api/types';
 import { AppError } from '@/lib/errors';
 import type { IUserService } from '@/services/studioUserService';
 import { getMembershipService } from '@/store/membershipStore';

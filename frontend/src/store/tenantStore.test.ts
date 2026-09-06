@@ -79,9 +79,7 @@ describe('tenantStore', () => {
   it('crea un tenant y recarga la lista para incluirlo', async () => {
     const created = makeTenant({ slug: 'nuevo', name: 'Nueva Empresa' });
     const create = vi.fn<ITenantService['create']>().mockResolvedValue(created);
-    const list = vi
-      .fn<ITenantService['list']>()
-      .mockResolvedValue([makeTenant(), created]);
+    const list = vi.fn<ITenantService['list']>().mockResolvedValue([makeTenant(), created]);
     setTenantService(makeTenantService({ create, list }));
 
     const result = await useTenantStore.getState().createTenant({
@@ -154,9 +152,7 @@ describe('tenantStore', () => {
   });
 
   it('degrade a error cuando falla la carga de tenants', async () => {
-    const list = vi
-      .fn<ITenantService['list']>()
-      .mockRejectedValue(new Error('red caída'));
+    const list = vi.fn<ITenantService['list']>().mockRejectedValue(new Error('red caída'));
     setTenantService(makeTenantService({ list }));
 
     await useTenantStore.getState().loadTenants();

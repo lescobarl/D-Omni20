@@ -194,9 +194,7 @@ describe('PortalEditor', () => {
       await user.click(screen.getByRole('button', { name: 'Publicar' }));
     });
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Guarda la página antes de publicarla.',
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('Guarda la página antes de publicarla.');
     expect(service.publish).not.toHaveBeenCalled();
   });
 
@@ -291,9 +289,9 @@ describe('PortalEditor', () => {
         page: 1,
         page_size: 100,
       }),
-      get: vi.fn().mockImplementation((id: string) =>
-        Promise.resolve(id === 'page-1' ? pageUno : pageDos),
-      ),
+      get: vi
+        .fn()
+        .mockImplementation((id: string) => Promise.resolve(id === 'page-1' ? pageUno : pageDos)),
     });
     setPortalService(service);
     const user = userEvent.setup();

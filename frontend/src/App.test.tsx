@@ -248,9 +248,30 @@ describe('App', () => {
   it('muestra el selector de tenant con los tenants disponibles y preselecciona el activo', async () => {
     setTenantService(
       createTenantServiceStub([
-        { id: 't-0', slug: 'test-tenant', name: 'Test Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-2', slug: 'escobar', name: 'Escobar', created_at: '', revision: 0, updated_at: '' },
+        {
+          id: 't-0',
+          slug: 'test-tenant',
+          name: 'Test Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-1',
+          slug: 'dev-tenant',
+          name: 'Dev Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-2',
+          slug: 'escobar',
+          name: 'Escobar',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
       ]),
     );
 
@@ -270,8 +291,22 @@ describe('App', () => {
     const user = userEvent.setup();
     setTenantService(
       createTenantServiceStub([
-        { id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-2', slug: 'escobar', name: 'Escobar', created_at: '', revision: 0, updated_at: '' },
+        {
+          id: 't-1',
+          slug: 'dev-tenant',
+          name: 'Dev Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-2',
+          slug: 'escobar',
+          name: 'Escobar',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
       ]),
     );
 
@@ -290,8 +325,22 @@ describe('App', () => {
     const user = userEvent.setup();
     setTenantService(
       createTenantServiceStub([
-        { id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-2', slug: 'escobar', name: 'Escobar', created_at: '', revision: 0, updated_at: '' },
+        {
+          id: 't-1',
+          slug: 'dev-tenant',
+          name: 'Dev Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-2',
+          slug: 'escobar',
+          name: 'Escobar',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
       ]),
     );
 
@@ -327,9 +376,7 @@ describe('App', () => {
   it('muestra el botón «Nuevo tenant» y abre el modal de creación', async () => {
     const user = userEvent.setup();
     setTenantService(
-      createTenantServiceStub([
-        makeTenant({ id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant' }),
-      ]),
+      createTenantServiceStub([makeTenant({ id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant' })]),
     );
 
     render(<App config={createTestConfig()} />);

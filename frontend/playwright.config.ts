@@ -44,7 +44,9 @@ export default defineConfig({
   // satura la máquina: Windows suspende la E/S de red bajo presión de memoria y
   // los tests fallan sistémicamente con `ERR_NETWORK_IO_SUSPENDED` en `goto("/")`.
   // Con 2 workers hay un máximo de 6 navegadores simultáneos, suficiente para el
-  // conjunto completo (69 tests) de forma fiable en equipos de desarrollo.
+  // conjunto completo (9 specs / 28 casos × 3 proyectos) de forma fiable en
+  // equipos de desarrollo. Nota: si el puerto 5173 está ocupado por otra app,
+  // usar `playwright.e2e-local.config.ts` (puerto 5174).
   workers: process.env.CI ? 1 : 2,
   reporter: [['list'], ['html', { open: 'never' }]],
   timeout: TEST_TIMEOUT_MS,

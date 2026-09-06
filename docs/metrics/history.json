@@ -215,6 +215,38 @@
         "frontend_functions": true,
         "backend_total": true
       }
+    },
+    {
+      "generated_at": "2026-09-06T02:59:38.882Z",
+      "compliance_score": 17.5,
+      "frontend": null,
+      "backend_total": 93,
+      "validators": {
+        "hardcode": true,
+        "trycatch": false,
+        "jsdoc": false,
+        "format": false
+      },
+      "build_ok": true,
+      "thresholds": {
+        "backend_total": true
+      }
+    },
+    {
+      "generated_at": "2026-09-06T03:09:09.085Z",
+      "compliance_score": 40,
+      "frontend": null,
+      "backend_total": 93,
+      "validators": {
+        "hardcode": true,
+        "trycatch": true,
+        "jsdoc": true,
+        "format": true
+      },
+      "build_ok": true,
+      "thresholds": {
+        "backend_total": true
+      }
     }
   ]
 }

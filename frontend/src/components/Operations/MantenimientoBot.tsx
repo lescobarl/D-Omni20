@@ -142,9 +142,9 @@ export function MantenimientoBot(): ReactElement {
   const [schedule, setSchedule] = useState<string>('');
 
   // Dominio seleccionado para la purga (B.9 — Limpieza por dominio).
-  const [purgeScope, setPurgeScope] = useState<'conversations' | 'knowledge_base' | 'configurations'>(
-    'conversations',
-  );
+  const [purgeScope, setPurgeScope] = useState<
+    'conversations' | 'knowledge_base' | 'configurations'
+  >('conversations');
 
   // Sección autocontenida: carga la configuración, el resumen operativo y las
   // métricas por tabla al montar (B.9).
@@ -407,14 +407,20 @@ export function MantenimientoBot(): ReactElement {
                   data-testid="purge-scope"
                   value={purgeScope}
                   onChange={(event) =>
-                    setPurgeScope(event.target.value as 'conversations' | 'knowledge_base' | 'configurations')
+                    setPurgeScope(
+                      event.target.value as 'conversations' | 'knowledge_base' | 'configurations',
+                    )
                   }
                   disabled={maintenanceActionStatus === 'loading'}
                   className="mt-1 block w-full max-w-xs rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="conversations">Conversaciones y mensajes</option>
-                  <option value="knowledge_base">Base de conocimiento (documentos y sinónimos)</option>
-                  <option value="configurations">Configuraciones (rebranding y mantenimiento)</option>
+                  <option value="knowledge_base">
+                    Base de conocimiento (documentos y sinónimos)
+                  </option>
+                  <option value="configurations">
+                    Configuraciones (rebranding y mantenimiento)
+                  </option>
                 </select>
               </label>
 

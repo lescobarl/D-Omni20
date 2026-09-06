@@ -80,15 +80,16 @@ export function makeMembership(
  * @param options.activeRole - Rol activo (por defecto el rol de la primera membresía).
  * @param options.isSuperAdmin - Indica si es super-admin (derivado de `user`).
  */
-export function seedAuthenticatedSession(options: {
-  user?: IUserRead;
-  memberships?: IMembershipRead[];
-  activeRole?: IRole | null;
-  isSuperAdmin?: boolean;
-} = {}): void {
+export function seedAuthenticatedSession(
+  options: {
+    user?: IUserRead;
+    memberships?: IMembershipRead[];
+    activeRole?: IRole | null;
+    isSuperAdmin?: boolean;
+  } = {},
+): void {
   const user = options.user ?? makeSuperAdminUser();
-  const memberships =
-    options.memberships ?? [makeMembership('test-tenant', 'admin', user.id)];
+  const memberships = options.memberships ?? [makeMembership('test-tenant', 'admin', user.id)];
   const activeRole =
     options.activeRole !== undefined ? options.activeRole : (memberships[0]?.role ?? null);
   const isSuperAdmin =

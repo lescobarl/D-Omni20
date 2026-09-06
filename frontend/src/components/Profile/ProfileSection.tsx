@@ -23,8 +23,11 @@ const ROLE_LABELS: Record<IRole, string> = {
 
 /** Estado del formulario de cambio de contraseña. */
 interface IPasswordForm {
+  /** Contraseña actual del usuario. */
   currentPassword: string;
+  /** Nueva contraseña (mínimo 8 caracteres). */
   newPassword: string;
+  /** Confirmación de la nueva contraseña. */
   confirmPassword: string;
 }
 
@@ -112,8 +115,11 @@ export function ProfileSection(): ReactElement {
   const handleLogout = async (): Promise<void> => {
     try {
       await logout();
-    } catch {
-      // El store ya expone el error; la UI convive sin romperse.
+    } catch (caught) {
+      // El store ya cerró la sesión local en `finally` y la capa API auditó el
+      // fallo; aquí solo se propaga el contexto del invariante (servicio ausente)
+      // sin silenciarlo.
+      console.error('[auth.logout] fallo tras el cierre local de sesión', caught);
     }
   };
 
@@ -225,9 +231,7 @@ export function ProfileSection(): ReactElement {
           Membresías ({memberships.length})
         </h3>
         {memberships.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">
-            No perteneces a ningún tenant todavía.
-          </p>
+          <p className="mt-3 text-sm text-slate-500">No perteneces a ningún tenant todavía.</p>
         ) : (
           <ul className="mt-3 divide-y divide-slate-100">
             {memberships.map((membership) => (

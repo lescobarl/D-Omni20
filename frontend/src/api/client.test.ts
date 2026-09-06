@@ -310,8 +310,22 @@ describe('HttpApiClient', () => {
   it('lista los tenants disponibles sin cabecera de tenant (control plane)', async () => {
     handler = () =>
       jsonResponse(200, [
-        { id: 't-1', slug: 'dev-tenant', name: 'Dev Tenant', created_at: '', revision: 0, updated_at: '' },
-        { id: 't-2', slug: 'escobar', name: 'Escobar', created_at: '', revision: 0, updated_at: '' },
+        {
+          id: 't-1',
+          slug: 'dev-tenant',
+          name: 'Dev Tenant',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
+        {
+          id: 't-2',
+          slug: 'escobar',
+          name: 'Escobar',
+          created_at: '',
+          revision: 0,
+          updated_at: '',
+        },
       ]);
 
     const result = await client.listTenants();

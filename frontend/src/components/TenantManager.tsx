@@ -16,12 +16,15 @@ import { useTenantStore } from '@/store/tenantStore';
 
 /** Estado del formulario de creación de un tenant. */
 interface ICreateForm {
+  /** Slug canónico del tenant (inmutable tras la creación). */
   slug: string;
+  /** Nombre legible del tenant. */
   name: string;
 }
 
 /** Estado del formulario de edición (solo nombre; el slug es inmutable). */
 interface IEditForm {
+  /** Nombre legible del tenant (el slug es inmutable). */
   name: string;
 }
 
@@ -170,7 +173,9 @@ export function TenantManager(): ReactElement {
             label="Slug"
             type="text"
             value={createForm.slug}
-            onChange={(event) => setCreateForm((current) => ({ ...current, slug: event.target.value }))}
+            onChange={(event) =>
+              setCreateForm((current) => ({ ...current, slug: event.target.value }))
+            }
             placeholder="mi-tenant"
             hint="Identificador único e inmutable (X-Tenant-Id)."
             required
@@ -180,7 +185,9 @@ export function TenantManager(): ReactElement {
             label="Nombre"
             type="text"
             value={createForm.name}
-            onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+            onChange={(event) =>
+              setCreateForm((current) => ({ ...current, name: event.target.value }))
+            }
             placeholder="Mi Tenant"
             required
           />
@@ -212,7 +219,8 @@ export function TenantManager(): ReactElement {
           />
           {activeTenant !== null && (
             <p className="text-xs text-slate-400">
-              Slug inmutable: <span className="font-medium text-slate-600">{activeTenant.slug}</span>
+              Slug inmutable:{' '}
+              <span className="font-medium text-slate-600">{activeTenant.slug}</span>
             </p>
           )}
           {formError !== null && (

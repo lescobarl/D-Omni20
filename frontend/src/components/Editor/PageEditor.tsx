@@ -18,14 +18,7 @@
  *   El componente solo orquesta el estado local (status/message/options/
  *   selectedId) y delega las mutaciones del store en el modo activo.
  */
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactElement,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { EditorLayout } from '@/components/Editor/EditorLayout';
 import { EditorStoreContext, type EditorStoreApi } from '@/store/editorStoreContext';
 import {
@@ -363,7 +356,18 @@ function createLandingMode(config: IAppConfig): IPageEditorMode {
     };
   };
 
-  return { store, isPortal, ui, messages, isServiceAvailable: () => service() !== null, loadList, loadItem, createNew, save, publish };
+  return {
+    store,
+    isPortal,
+    ui,
+    messages,
+    isServiceAvailable: () => service() !== null,
+    loadList,
+    loadItem,
+    createNew,
+    save,
+    publish,
+  };
 }
 
 /** Crea el modo portal del configurador único. */
@@ -415,7 +419,10 @@ function createPortalMode(_config: IAppConfig): IPageEditorMode {
       return [];
     }
     const result = svc.list({ page: 1, page_size: 100 });
-    if (result === undefined || typeof (result as PromiseLike<unknown> | undefined)?.then !== 'function') {
+    if (
+      result === undefined ||
+      typeof (result as PromiseLike<unknown> | undefined)?.then !== 'function'
+    ) {
       return [];
     }
     const page = await result;
@@ -495,7 +502,18 @@ function createPortalMode(_config: IAppConfig): IPageEditorMode {
     return { message: messages.publishSuccessMessage(updated.published) };
   };
 
-  return { store, isPortal, ui, messages, isServiceAvailable: () => service() !== null, loadList, loadItem, createNew, save, publish };
+  return {
+    store,
+    isPortal,
+    ui,
+    messages,
+    isServiceAvailable: () => service() !== null,
+    loadList,
+    loadItem,
+    createNew,
+    save,
+    publish,
+  };
 }
 
 interface IPageEditorProps {
@@ -584,9 +602,7 @@ export function PageEditor({
           return;
         }
         setStatus('error');
-        setMessage(
-          error instanceof Error ? error.message : editorMode.messages.loadListError,
-        );
+        setMessage(error instanceof Error ? error.message : editorMode.messages.loadListError);
       });
     return () => {
       cancelled = true;

@@ -1088,7 +1088,10 @@ export const useOperationsStore = create<IOperationsState>()((set, get) => ({
     } catch (error) {
       set({
         dispatchStatus: 'error',
-        dispatchError: extractErrorMessage(error, 'No se pudo despachar la campaña desde el archivo.'),
+        dispatchError: extractErrorMessage(
+          error,
+          'No se pudo despachar la campaña desde el archivo.',
+        ),
       });
     }
   },
@@ -1543,7 +1546,10 @@ export const useOperationsStore = create<IOperationsState>()((set, get) => ({
     } catch (error) {
       set({
         tableStatsStatus: 'error',
-        tableStatsError: extractErrorMessage(error, 'No se pudieron cargar las métricas por tabla.'),
+        tableStatsError: extractErrorMessage(
+          error,
+          'No se pudieron cargar las métricas por tabla.',
+        ),
       });
     }
   },

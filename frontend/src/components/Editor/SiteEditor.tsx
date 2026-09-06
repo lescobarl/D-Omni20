@@ -156,9 +156,7 @@ export function SiteEditor({ config }: ISiteEditorProps): ReactElement {
   };
 
   const selectedKey =
-    selection.kind === 'landing'
-      ? `landing:${selection.id}`
-      : `portal:${selection.id}`;
+    selection.kind === 'landing' ? `landing:${selection.id}` : `portal:${selection.id}`;
 
   const isPortal = selection.kind === 'portal';
   const portalSelectedId = isPortal ? selection.id : undefined;
@@ -191,9 +189,7 @@ export function SiteEditor({ config }: ISiteEditorProps): ReactElement {
           <optgroup label="Páginas del portal">
             {portalOptions.length === 0 ? (
               <option value="" disabled>
-                {portalServiceAvailable
-                  ? 'Sin páginas todavía'
-                  : 'Portal no disponible'}
+                {portalServiceAvailable ? 'Sin páginas todavía' : 'Portal no disponible'}
               </option>
             ) : (
               portalOptions.map((option) => (

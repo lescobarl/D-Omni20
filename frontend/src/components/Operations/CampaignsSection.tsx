@@ -1022,9 +1022,7 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                                       <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
                                         {file.name}
                                       </span>
-                                      <span className="text-slate-400">
-                                        {file.content_type}
-                                      </span>
+                                      <span className="text-slate-400">{file.content_type}</span>
                                       <button
                                         type="button"
                                         disabled={recipientFilePreviewStatus === 'loading'}

@@ -48,9 +48,7 @@ describe('BackendTenantService', () => {
   it('crea un tenant delegando el payload en el cliente', async () => {
     const apiClient = makeApiClientMock();
     const created = makeTenant({ slug: 'nuevo', name: 'Nueva Empresa' });
-    const createTenant = vi
-      .fn<typeof apiClient.createTenant>()
-      .mockResolvedValue(created);
+    const createTenant = vi.fn<typeof apiClient.createTenant>().mockResolvedValue(created);
     apiClient.createTenant = createTenant;
     const service = new BackendTenantService(apiClient);
 
@@ -63,9 +61,7 @@ describe('BackendTenantService', () => {
   it('actualiza el nombre de un tenant por su slug delegando en el cliente', async () => {
     const apiClient = makeApiClientMock();
     const updated = makeTenant({ name: 'Acme Renamed', revision: 1 });
-    const updateTenant = vi
-      .fn<typeof apiClient.updateTenant>()
-      .mockResolvedValue(updated);
+    const updateTenant = vi.fn<typeof apiClient.updateTenant>().mockResolvedValue(updated);
     apiClient.updateTenant = updateTenant;
     const service = new BackendTenantService(apiClient);
 

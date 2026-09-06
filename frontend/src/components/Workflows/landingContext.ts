@@ -40,9 +40,7 @@ export function useCurrentLanding(): ILandingConfig {
  * @returns `{ landing_id, campaign_id }` si la landing tiene campaña
  *   configurada; `null` en caso contrario (landing local sin campaña).
  */
-export function resolveLandingContext(
-  landing: ILandingConfig,
-): ILandingContext | null {
+export function resolveLandingContext(landing: ILandingConfig): ILandingContext | null {
   if (!landing.id || landing.campaignId.trim() === '') return null;
   return {
     landing_id: landing.id,

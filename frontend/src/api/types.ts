@@ -2147,11 +2147,7 @@ export interface IMaintenanceActionRead {
   /** Identificador del tenant propietario. */
   tenant_id: string;
   /** Acción ejecutada: purga por dominio u optimización física. */
-  action:
-    | 'purge'
-    | 'purge_knowledge_base'
-    | 'purge_configurations'
-    | 'optimize';
+  action: 'purge' | 'purge_knowledge_base' | 'purge_configurations' | 'optimize';
   /** Conversaciones eliminadas por la purga (solo purge). */
   deleted_conversations: number;
   /** Mensajes eliminados por la purga (solo purge). */
