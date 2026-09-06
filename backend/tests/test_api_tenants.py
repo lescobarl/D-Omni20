@@ -238,12 +238,28 @@ def test_tenants_requires_authentication(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "auth.unauthorized"
 
 
-def test_tenants_forbidden_for_non_super_admin(
-    client: TestClient, tenant_admin_token: str
+def test_tenants_scoped_to_memberships_for_non_super_admin(
+    client: TestClient,
+    super_admin_token: str,
+    tenant_admin_token: str,
+    test_settings,
 ) -> None:
-    """Un admin de tenant (no super-admin) no puede operar el control plane."""
+    """Un admin de tenant (no super-admin) solo ve los tenants a los que pertenece.
+
+    El selector de tenant de la cabecera se alimenta de ``GET /api/v1/tenants``,
+    por lo que cualquier usuario autenticado debe poder listar sus propios
+    tenants (vía membresías) sin exigir privilegios de super-admin. Un tenant
+    ajeno creado por el super-admin NO debe aparecer en su lista.
+    """
+    # El super-admin crea un tenant ajeno al que el admin de tenant no pertenece.
+    _, foreign_body = _create_tenant(client, super_admin_token)
+
     response = client.get(
         "/api/v1/tenants", headers=_auth_headers(tenant_admin_token)
     )
-    assert response.status_code == 403, response.text
-    assert response.json()["error"]["code"] == "auth.forbidden"
+    assert response.status_code == 200, response.text
+    slugs = [t["slug"] for t in response.json()]
+    # Ve el tenant de desarrollo al que pertenece por membresía.
+    assert test_settings.dev_tenant_slug in slugs
+    # No ve el tenant ajeno creado por el super-admin.
+    assert foreign_body["slug"] not in slugs

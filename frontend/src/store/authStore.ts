@@ -108,7 +108,9 @@ function toErrorMessage(error: unknown): string {
  * que causaba fallos de RBAC. `role` es el rol del usuario en ese tenant.
  */
 interface IResolvedTenant {
+  /** Tenant activo resuelto (con `slug` y `id`) o `null` sin membresía. */
   tenant: IActiveTenant | null;
+  /** Rol del usuario en el tenant activo o `null`. */
   role: IRole | null;
 }
 
@@ -248,8 +250,14 @@ export const useAuthStore = create<IAuthState>()((set, get) => ({
         error: null,
       });
     } catch (error) {
-      // Token inválido/expirado o sin sesión: se limpia el estado local.
-      setActiveTenant(null);
+      // Token inválido/expirado o sin sesión: se limpia el estado local de sesión.
+      // NOTA: NO se limpia el contexto de tenant (`setActiveTenant(null)`). Ese
+      // contexto se siembra en el arranque desde la configuración (main.tsx) y es
+      // necesario para resolver el rol al iniciar sesión después. Si se limpiara
+      // aquí, `getActiveTenantSlug()` devolvería `null` en el siguiente `login()`
+      // y `resolveActiveTenant` no podría emparejar la membresía → rol activo
+      // `null` → navegación vacía (fail-closed). El contexto de tenant solo se
+      // reinicia en `logout()` explícito.
       set({
         user: null,
         memberships: [],
@@ -269,7 +277,10 @@ export const useAuthStore = create<IAuthState>()((set, get) => ({
     // envíe el UUID real.
     const membership = get().memberships.find((item) => item.tenant_slug === tenantId);
     if (membership) {
-      setActiveTenant({ slug: membership.tenant_slug ?? membership.tenant_id, id: membership.tenant_id });
+      setActiveTenant({
+        slug: membership.tenant_slug ?? membership.tenant_id,
+        id: membership.tenant_id,
+      });
       set({ activeRole: membership.role, error: null });
       return;
     }
@@ -285,7 +296,10 @@ export const useAuthStore = create<IAuthState>()((set, get) => ({
     }
     set({ status: 'loading', error: null });
     try {
-      await service.changePassword({ current_password: currentPassword, new_password: newPassword });
+      await service.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
       set({ status: 'success', error: null });
     } catch (error) {
       set({ status: 'error', error: toErrorMessage(error) });

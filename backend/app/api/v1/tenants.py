@@ -15,7 +15,6 @@ Regla CLAUDE (nada de hardcode, todo dinámico):
 
 from __future__ import annotations
 
-import uuid
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Response, status
@@ -23,6 +22,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import (
     get_container,
+    get_current_user,
+    get_membership_repository,
     get_pseo_host_repository,
     get_session,
     get_tenant_repository,
@@ -31,7 +32,11 @@ from app.api.deps import (
 from app.core.di import Container
 from app.core.errors import ConflictError, NotFoundError
 from app.models.user import User
-from app.repositories.interfaces import IPseoHostRepository, ITenantRepository
+from app.repositories.interfaces import (
+    IMembershipRepository,
+    IPseoHostRepository,
+    ITenantRepository,
+)
 from app.schemas.tenant import TenantCreate, TenantRead, TenantUpdate
 from app.services.client_subdomain import provision_client_subdomain
 
@@ -77,11 +82,30 @@ def create_tenant(
 
 @router.get("", response_model=list[TenantRead])
 def list_tenants(
-    _admin: User = Depends(require_super_admin),
+    user: User = Depends(get_current_user),
     repository: ITenantRepository = Depends(get_tenant_repository),
+    membership_repository: IMembershipRepository = Depends(
+        get_membership_repository
+    ),
 ) -> list[TenantRead]:
-    """Lista todos los tenants activos (control plane)."""
-    return [TenantRead.model_validate(t) for t in repository.list_all()]
+    """Lista los tenants visibles para el usuario autenticado.
+
+    - Super-admin (control plane): devuelve todos los tenants activos.
+    - Resto de usuarios (admin/configurador/operador): devuelve únicamente los
+      tenants a los que pertenece vía ``tenant_memberships``. Esto permite que el
+      selector de tenant de la cabecera se rellene para cualquier rol sin exigir
+      privilegios de super-admin.
+    """
+    if user.is_super_admin:
+        return [TenantRead.model_validate(t) for t in repository.list_all()]
+
+    memberships = membership_repository.list_by_user(user_id=user.id)
+    tenants: list[TenantRead] = []
+    for membership in memberships:
+        tenant = repository.get_by_id(membership.tenant_id)
+        if tenant is not None:
+            tenants.append(TenantRead.model_validate(tenant))
+    return tenants
 
 
 @router.get("/{slug}", response_model=TenantRead)

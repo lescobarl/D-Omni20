@@ -75,7 +75,8 @@ export default function App({ config }: IAppProps): ReactElement {
   // debe reflejar esa página y no la landing por defecto del store de arranque).
   const portalPageId = usePortalStore((state) => state.pageId);
   const portalTitle = usePortalStore((state) => state.landing.title);
-  const siteTitle = portalPageId !== null && portalPageId !== undefined ? portalTitle : landingTitle;
+  const siteTitle =
+    portalPageId !== null && portalPageId !== undefined ? portalTitle : landingTitle;
   const [view, setView] = useState<AppView>('editor');
   const settingsEnabled = config.features.appearance;
   const operationsEnabled = config.features.operations;
@@ -105,9 +106,21 @@ export default function App({ config }: IAppProps): ReactElement {
   // Contexto RBAC evaluado por la UI para filtrar navegación y ocultar áreas.
   const rbacContext = { role: activeRole, isSuperAdmin };
 
+  // Carga la lista de tenants (control plane) al montar. El endpoint exige
+  // autenticación, así que si el usuario aún no ha iniciado sesión la primera
+  // llamada devuelve 401 y `tenants` queda vacío. Por eso se vuelve a cargar
+  // cuando la autenticación pasa a `true` (tras login o restauración de sesión),
+  // garantizando que el selector de tenant se renderice para cualquier usuario
+  // autenticado (admin/configurador/operador).
   useEffect(() => {
     void loadTenants();
   }, [loadTenants]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void loadTenants();
+    }
+  }, [isAuthenticated, loadTenants]);
 
   // Restaura la sesión al arrancar (si hay token persistido). En pruebas se siembra
   // `isAuthenticated` directamente, por lo que `loadMe` sin servicio no rompe la UI.
