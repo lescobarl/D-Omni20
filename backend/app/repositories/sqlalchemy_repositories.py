@@ -109,6 +109,17 @@ class SqlAlchemyTenantRepository(ITenantRepository):
         return self._session.scalars(statement).first()
 
     def create(self, slug: str, name: str) -> Tenant:
+        # Borrado lógico + unicidad global del slug: si existe un tenant con ese
+        # slug pero soft-deleted, se REACTIVA (con su historial) en lugar de
+        # bloquear el alta. Un slug activo existente sigue derivando en el
+        # IntegrityError de unicidad que el endpoint traduce a 409.
+        existing = self._session.scalars(select(Tenant).where(Tenant.slug == slug)).first()
+        if existing is not None and existing.deleted:
+            existing.deleted = False
+            existing.name = name
+            existing.revision = (existing.revision or 0) + 1
+            self._session.flush()
+            return existing
         tenant = Tenant(slug=slug, name=name)
         self._session.add(tenant)
         self._session.flush()

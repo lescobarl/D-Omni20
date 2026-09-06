@@ -197,6 +197,33 @@ def test_delete_tenant_not_found(client: TestClient, super_admin_token: str) -> 
     assert response.status_code == 404, response.text
 
 
+def test_recreate_tenant_after_soft_delete_reactivates(
+    client: TestClient, super_admin_token: str
+) -> None:
+    """Borrar (soft) y volver a crear el mismo slug reactiva el tenant."""
+    _, body = _create_tenant(client, super_admin_token)
+    slug = body["slug"]
+    assert (
+        client.delete(
+            f"/api/v1/tenants/{slug}", headers=_auth_headers(super_admin_token)
+        ).status_code
+        == 204
+    )
+
+    response = client.post(
+        "/api/v1/tenants",
+        headers=_auth_headers(super_admin_token),
+        json={"slug": slug, "name": f"Inmobiliaria {slug.title()}"},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["slug"] == slug
+    # Vuelve a estar activo y visible en el listado.
+    assert (
+        client.get(f"/api/v1/tenants/{slug}", headers=_auth_headers(super_admin_token)).status_code
+        == 200
+    )
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Nivel repositorio (soft-delete real en BD)
 # ────────────────────────────────────────────────────────────────────────────
