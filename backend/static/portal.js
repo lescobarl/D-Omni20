@@ -135,6 +135,70 @@
   }
 
   /**
+   * Muestra la sección de Pagos con filas pulsables (detalle por pago).
+   * @param {string} apiBaseUrl - Base normalizada del backend.
+   * @param {HTMLElement} container - Contenedor del portal.
+   * @param {Array} payments - Pagos del resumen.
+   */
+  function renderPayments(apiBaseUrl, container, payments) {
+    container.appendChild(el('h4', { className: 'omni-portal-section', textContent: 'Pagos' }));
+    if (!payments.length) {
+      container.appendChild(el('p', { className: 'omni-portal-empty', textContent: 'Sin registros.' }));
+      return;
+    }
+    var list = document.createElement('ul');
+    payments.forEach(function (payment) {
+      var row = document.createElement('li');
+      var button = el('button', {
+        className: 'omni-portal-link',
+        textContent:
+          'Pago ' + formatAmount(payment.amount_minor, payment.currency) +
+          ' · ' + (payment.status || '—') + ' · ' + formatDate(payment.created_at)
+      });
+      button.addEventListener('click', function () {
+        fetchPaymentDetail(apiBaseUrl, payment.id, row);
+      });
+      row.appendChild(button);
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+  }
+
+  /**
+   * Carga el detalle de un pago (GET /api/v1/portal/payments/{id}) y lo muestra.
+   * @param {string} apiBaseUrl - Base normalizada del backend.
+   * @param {string} paymentId - Identificador del pago.
+   * @param {HTMLElement} row - Fila pulsada donde se inserta el detalle.
+   */
+  function fetchPaymentDetail(apiBaseUrl, paymentId, row) {
+    var existing = row.parentNode.querySelector('.omni-portal-detail');
+    if (existing) { existing.remove(); return; }
+    apiRequest(apiBaseUrl, '/api/v1/portal/payments/' + encodeURIComponent(paymentId))
+      .then(function (response) {
+        if (!response.ok) { throw new Error('Detalle no disponible (' + response.status + ')'); }
+        return response.json();
+      })
+      .then(function (detail) {
+        var box = el('div', { className: 'omni-portal-detail' });
+        box.appendChild(el('p', {
+          textContent: 'Estado: ' + (detail.status || '—') +
+            ' · Total: ' + formatAmount(detail.amount_minor, detail.currency) +
+            ' · Creado: ' + formatDate(detail.created_at)
+        }));
+        if (detail.payment_method) {
+          box.appendChild(el('p', { textContent: 'Método: ' + detail.payment_method }));
+        }
+        if (detail.metadata && detail.metadata.items) {
+          box.appendChild(el('p', { textContent: 'Items: ' + JSON.stringify(detail.metadata.items) }));
+        }
+        row.appendChild(box);
+      })
+      .catch(function (error) {
+        console.warn('[omni-portal] error en detalle de pago', error);
+      });
+  }
+
+  /**
    * Muestra el panel de resumen del cliente (pagos, leads, cotizaciones, citas).
    * @param {string} apiBaseUrl - Base normalizada del backend.
    * @param {HTMLElement} container - Contenedor del portal.
@@ -143,14 +207,21 @@
   function renderSummary(apiBaseUrl, container, summary) {
     container.textContent = '';
     var email = sessionStorage.getItem(EMAIL_KEY) || summary.email || '';
-    var welcome = el('p', { className: 'omni-portal-welcome', textContent: 'Hola, ' + email });
-    container.appendChild(welcome);
-
-    var payments = (summary.payments || []).map(function (payment) {
-      return 'Pago ' + formatAmount(payment.amount_minor, payment.currency) +
-        ' · ' + (payment.status || '—') + ' · ' + formatDate(payment.created_at);
+    var header = el('div', { className: 'omni-portal-head' });
+    header.appendChild(el('p', { className: 'omni-portal-welcome', textContent: 'Hola, ' + email }));
+    var logoutButton = el('button', {
+      className: 'omni-portal-btn',
+      textContent: 'Salir'
     });
-    renderSection(container, 'Pagos', payments);
+    logoutButton.addEventListener('click', function () {
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(EMAIL_KEY);
+      window.location.reload();
+    });
+    header.appendChild(logoutButton);
+    container.appendChild(header);
+
+    renderPayments(apiBaseUrl, container, summary.payments || []);
 
     var leads = (summary.leads || []).map(function (lead) {
       return (lead.name || '—') + ' · ' + (lead.email || '—') +
