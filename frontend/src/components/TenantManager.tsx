@@ -1,5 +1,5 @@
 /**
- * Controles de CRUD de tenants (control plane) en la cabecera.
+ * Controles de CRUD de tenants (control plane) de la pestaña «Tenants».
  *
  * Contrato:
  * - Botón «Nuevo tenant» abre un modal para CREAR un tenant (slug + nombre).
@@ -31,7 +31,7 @@ interface IEditForm {
 const EMPTY_CREATE: ICreateForm = { slug: '', name: '' };
 
 /**
- * Renderiza los controles de gestión de tenants junto al selector de la cabecera.
+ * Renderiza los controles de gestión de tenants (control plane).
  *
  * @returns Botones de crear/editar/eliminar y sus modales.
  */

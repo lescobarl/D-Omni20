@@ -7,7 +7,7 @@
  * - `color-contrast` se desactiva por defecto: jsdom no implementa el cálculo
  *   de estilos derivados que la regla requiere para ser fiable.
  */
-import axe, { type AxeResults } from 'axe-core';
+import type { AxeResults } from 'axe-core';
 
 /** Opciones para ejecutar el análisis de accesibilidad. */
 export interface IAxeRunOptions {
@@ -34,7 +34,10 @@ export async function runAxe(
     acc[ruleId] = { enabled: false };
     return acc;
   }, {});
-  return axe.run(container, { rules });
+  // axe-core se importa solo al auditar (matcher de a11y): evitarlo en todos los
+  // demás tests jsdom reduce el setup de cada worker (carga perezosa).
+  const axe = await import('axe-core');
+  return axe.default.run(container, { rules });
 }
 
 /**

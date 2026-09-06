@@ -10,7 +10,7 @@
  *   áreas RBAC a las que no tiene acceso.
  */
 import { act } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
@@ -99,10 +99,26 @@ describe('App — puerta de autenticación y RBAC', () => {
     // Cabecera con el nombre de la aplicación y la navegación por áreas.
     expect(screen.getByText('OmniBotIA Studio')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Áreas de la aplicación' })).toBeInTheDocument();
-    // El super-admin ve la gestión de tenants (control plane) y «Usuarios».
-    expect(screen.getByRole('button', { name: 'Nuevo tenant' })).toBeInTheDocument();
+    // El super-admin ve el control plane («Usuarios» y «Tenants») y «Mi perfil».
     expect(screen.getByRole('button', { name: 'Usuarios' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tenants' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeInTheDocument();
+    // La gestión de tenants ya no se muestra regada en la cabecera.
+    expect(screen.queryByRole('button', { name: 'Nuevo tenant' })).toBeNull();
+  });
+
+  it('el super-admin gestiona los tenants desde su propia pestaña', async () => {
+    const user = userEvent.setup();
+    seedAuthenticatedSession();
+
+    render(<App config={createTestConfig()} />);
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
+    });
+
+    expect(screen.getByRole('heading', { name: 'Gestión de tenants' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nuevo tenant' })).toBeInTheDocument();
   });
 
   it('el super-admin puede navegar al área de usuarios de la plataforma', async () => {
@@ -136,14 +152,80 @@ describe('App — puerta de autenticación y RBAC', () => {
 
     // El shell autenticado se muestra (no el login).
     expect(screen.getByRole('navigation', { name: 'Áreas de la aplicación' })).toBeInTheDocument();
-    // Sin control plane: no hay gestión de tenants.
+    // Sin control plane: no hay gestión de tenants ni pestaña «Tenants».
     expect(screen.queryByRole('button', { name: 'Nuevo tenant' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tenants' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Renombrar' })).toBeNull();
     // «Usuarios» (platformUsers) está oculto para quien no es super-admin.
     expect(screen.queryByRole('button', { name: 'Usuarios' })).toBeNull();
     // El rol configurador sí accede a contenido («Sitio») y a «Mi perfil».
     expect(screen.getByRole('button', { name: 'Sitio' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeInTheDocument();
+  });
+
+  it('el operador solo ve las áreas de operación (definición RBAC)', () => {
+    seedAuthenticatedSession({
+      user: makeRegularUser(),
+      memberships: [makeMembership('test-tenant', 'operador', 'user-operador')],
+      activeRole: 'operador',
+      isSuperAdmin: false,
+    });
+
+    render(
+      <App
+        config={createTestConfig({
+          features: {
+            ...createTestConfig().features,
+            operations: true,
+            ads: true,
+            hosts: true,
+            appearance: true,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Áreas de la aplicación' })).toBeInTheDocument();
+    // Operación sí (admin/operador); contenido y configuración del tenant no.
+    expect(screen.getByRole('button', { name: 'Operación del bot' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sitio' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Configuración' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Dominios' })).toBeNull();
+    // Sin control plane ni gestión de usuarios/tenants.
+    expect(screen.queryByRole('button', { name: 'Usuarios' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tenants' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeInTheDocument();
+  });
+
+  it('el admin del tenant accede a contenido, configuración y operación (definición RBAC)', () => {
+    seedAuthenticatedSession({
+      user: makeRegularUser(),
+      memberships: [makeMembership('test-tenant', 'admin', 'user-admin')],
+      activeRole: 'admin',
+      isSuperAdmin: false,
+    });
+
+    render(
+      <App
+        config={createTestConfig({
+          features: {
+            ...createTestConfig().features,
+            operations: true,
+            ads: true,
+            hosts: true,
+            appearance: true,
+          },
+        })}
+      />,
+    );
+
+    // Admin (no super-admin) gestiona el tenant: sitio + configuración + operación.
+    expect(screen.getByRole('button', { name: 'Sitio' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Configuración' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Operación del bot' })).toBeInTheDocument();
+    // El control plane queda reservado al super-admin.
+    expect(screen.queryByRole('button', { name: 'Usuarios' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tenants' })).toBeNull();
   });
 
   it('un usuario no super-admin sin membresía no ve áreas RBAC restringidas', () => {
@@ -157,9 +239,10 @@ describe('App — puerta de autenticación y RBAC', () => {
 
     render(<App config={createTestConfig()} />);
 
-    // Sin control plane ni «Usuarios».
+    // Sin control plane ni «Usuarios»/«Tenants».
     expect(screen.queryByRole('button', { name: 'Nuevo tenant' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Usuarios' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tenants' })).toBeNull();
     // Sin rol por tenant no accede a contenido («Sitio» está fail-closed).
     expect(screen.queryByRole('button', { name: 'Sitio' })).toBeNull();
   });
@@ -219,5 +302,47 @@ describe('App — puerta de autenticación y RBAC', () => {
     // Al cambiar de tenant se recalcula el rol activo desde las membresías.
     expect(useAuthStore.getState().activeRole).toBe('operador');
     expect(useTenantStore.getState().activeTenantId).toBe('dev-tenant');
+  });
+
+  it('muestra un botón de salida persistente que permite entrar con otro perfil', async () => {
+    const user = userEvent.setup();
+    seedAuthenticatedSession();
+    const logoutSpy = vi.fn(async () => undefined);
+    setAuthService({
+      login: async () => {
+        throw new Error('no usado en esta prueba');
+      },
+      logout: logoutSpy,
+      // Tras cerrar sesión, la restauración automática debe fallar (el token ya
+      // no es válido), como ocurre con el backend real.
+      me: async () => {
+        throw new Error('Sesión cerrada');
+      },
+      myMemberships: async () => {
+        throw new Error('Sesión cerrada');
+      },
+      changePassword: async () => {
+        throw new Error('no usado en esta prueba');
+      },
+      updateMe: async () => {
+        throw new Error('no usado en esta prueba');
+      },
+    });
+
+    render(<App config={createTestConfig()} />);
+
+    const logoutButton = screen.getByRole('button', { name: 'Cerrar sesión' });
+    expect(logoutButton).toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(logoutButton);
+    });
+
+    // La sesión se cierra y la app vuelve a la pantalla de inicio de sesión,
+    // lista para entrar con otro usuario/perfil.
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Áreas de la aplicación' })).toBeNull();
   });
 });

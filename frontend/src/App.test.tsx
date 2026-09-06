@@ -382,6 +382,10 @@ describe('App', () => {
     render(<App config={createTestConfig()} />);
 
     await screen.findByRole('combobox', { name: 'Tenant activo' });
+    // La gestión de tenants vive en su propia pestaña (control plane).
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
+    });
     const createButton = screen.getByRole('button', { name: 'Nuevo tenant' });
     expect(createButton).toBeInTheDocument();
 
@@ -405,6 +409,9 @@ describe('App', () => {
     render(<App config={createTestConfig()} />);
 
     const selector = await screen.findByRole('combobox', { name: 'Tenant activo' });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
+    });
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Nuevo tenant' }));
     });
@@ -437,6 +444,11 @@ describe('App', () => {
     // Selecciona el tenant a renombrar.
     await act(async () => {
       await user.selectOptions(selector, 'escobar');
+    });
+
+    // La gestión de tenants vive en su propia pestaña (control plane).
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
     });
 
     await act(async () => {
@@ -475,6 +487,11 @@ describe('App', () => {
       await user.selectOptions(selector, 'escobar');
     });
 
+    // La gestión de tenants vive en su propia pestaña (control plane).
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
+    });
+
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Eliminar' }));
     });
@@ -499,6 +516,11 @@ describe('App', () => {
     const selector = await screen.findByRole('combobox', { name: 'Tenant activo' });
     // El tenant de arranque (config) es el activo por defecto: dev-tenant.
     expect(selector).toHaveValue('dev-tenant');
+
+    // La gestión de tenants vive en su propia pestaña (control plane).
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Tenants' }));
+    });
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Eliminar' }));

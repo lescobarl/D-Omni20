@@ -8,7 +8,8 @@
  * - La navegación sitúa la pestaña de configuración al FINAL de todas las
  *   pestañas en todos los perfiles: Sitio (construir el sitio) → Captación
  *   (atraer tráfico) → Operación del bot (operar leads/campañas) → Dominios
- *   (dominios personalizados) → Configuración (ajustes técnicos) → Mi perfil.
+ *   (dominios personalizados) → Usuarios/Tenants (control plane) →
+ *   Configuración (ajustes técnicos) → Mi perfil.
  * - Cada área es un botón persistente con etiqueta estable: la activa se resalta
  *   y el resto permanece visible, de modo que nunca hay que "volver al editor"
  *   mediante un botón genérico: se navega directamente a la sección deseada.
@@ -21,7 +22,7 @@ import { DominiosSection } from '@/components/Dominios/DominiosSection';
 import { OperationsArea } from '@/components/Operations/OperationsArea';
 import { SiteEditor } from '@/components/Editor/SiteEditor';
 import { TenantConfigSettings } from '@/components/Settings/TenantConfigSettings';
-import { TenantManager } from '@/components/TenantManager';
+import { TenantsSection } from '@/components/Tenants/TenantsSection';
 import { LoginScreen } from '@/components/Auth/LoginScreen';
 import { ProfileSection } from '@/components/Profile/ProfileSection';
 import { UsersSection } from '@/components/Users/UsersSection';
@@ -40,7 +41,8 @@ interface IAppProps {
 }
 
 /** Vista activa de la aplicación. */
-type AppView = 'editor' | 'ads' | 'operations' | 'settings' | 'hosts' | 'users' | 'profile';
+type AppView =
+  'editor' | 'ads' | 'operations' | 'settings' | 'hosts' | 'users' | 'tenants' | 'profile';
 
 /** Entrada de navegación persistente de la cabecera. */
 interface INavItem {
@@ -102,6 +104,7 @@ export default function App({ config }: IAppProps): ReactElement {
   const activeRole = useAuthStore((state) => state.activeRole);
   const isSuperAdmin = useAuthStore((state) => state.isSuperAdmin);
   const loadMe = useAuthStore((state) => state.loadMe);
+  const logout = useAuthStore((state) => state.logout);
   const setActiveTenantRole = useAuthStore((state) => state.setActiveTenantRole);
 
   // Contexto RBAC evaluado por la UI para filtrar navegación y ocultar áreas.
@@ -123,11 +126,16 @@ export default function App({ config }: IAppProps): ReactElement {
     }
   }, [isAuthenticated, loadTenants]);
 
-  // Restaura la sesión al arrancar (si hay token persistido). En pruebas se siembra
+  // Restaura la sesión al arrancar (si hay token persistido) y la REINTENTA al
+  // pasar de autenticado a no-autenticado (logout): el token ya no es válido en
+  // el backend, la restauración falla y la puerta muestra la pantalla de login
+  // (en lugar de quedarse en «Cargando…»). En pruebas se siembra
   // `isAuthenticated` directamente, por lo que `loadMe` sin servicio no rompe la UI.
   useEffect(() => {
-    void loadMe();
-  }, [loadMe]);
+    if (!isAuthenticated) {
+      void loadMe();
+    }
+  }, [isAuthenticated, loadMe]);
 
   // Tenant visible: el activo en runtime si ya se cargó; en caso contrario se
   // degrada al tenant de arranque (configuración) para no romper la UI.
@@ -214,6 +222,17 @@ export default function App({ config }: IAppProps): ReactElement {
           },
         ]
       : []),
+    ...(canAccessArea('platformUsers', rbacContext)
+      ? [
+          {
+            view: 'tenants' as AppView,
+            label: 'Tenants',
+            subtitle: 'Gestión de tenants (control plane)',
+            announcement: 'Gestión de tenants abierta',
+            area: 'platformUsers' as RbacArea,
+          },
+        ]
+      : []),
     ...(settingsEnabled
       ? [
           {
@@ -288,6 +307,10 @@ export default function App({ config }: IAppProps): ReactElement {
               {config.appEnv}
             </span>
             <div className="flex items-center gap-2">
+              {/* Selector de tenant: siempre en la parte superior derecha para
+                  TODOS los perfiles (la lista se carga al autenticarse). La
+                  gestión de tenants (crear/renombrar/eliminar) vive en su propia
+                  pestaña «Tenants» (control plane, super-admin). */}
               <label
                 htmlFor="tenant-select"
                 className="text-xs font-medium uppercase tracking-wide text-slate-500"
@@ -327,8 +350,19 @@ export default function App({ config }: IAppProps): ReactElement {
                   {displayedTenantId}
                 </span>
               )}
-              {/* Gestión de tenants (control plane): solo visible para super-admin. */}
-              {isSuperAdmin ? <TenantManager /> : null}
+              {/* Cierre de sesión persistente (todos los perfiles): permite salir
+                  para entrar con otro usuario o perfil. */}
+              <button
+                type="button"
+                onClick={() => {
+                  void logout();
+                }}
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión para entrar con otro usuario o perfil."
+                className="rounded border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                Salir
+              </button>
             </div>
           </div>
         </div>
@@ -359,6 +393,8 @@ export default function App({ config }: IAppProps): ReactElement {
           <DominiosSection config={config} />
         ) : view === 'users' ? (
           <UsersSection />
+        ) : view === 'tenants' ? (
+          <TenantsSection />
         ) : view === 'profile' ? (
           <ProfileSection />
         ) : (
