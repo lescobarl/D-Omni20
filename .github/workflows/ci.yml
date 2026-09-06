@@ -52,4 +52,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Suite completa de tests (con umbral de cobertura 80%)
-        run: python -m pytest
+        run: |
+          set +e
+          python -m pytest > /tmp/pytest.log 2>&1
+          code=$?
+          tail -c 4000 /tmp/pytest.log > /tmp/pytest-tail.txt
+          python - <<'PYEOF'
+          from pathlib import Path
+          text = Path('/tmp/pytest-tail.txt').read_text(encoding='utf-8', errors='replace')
+          safe = text.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+          print(f'::error file=.github/workflows/ci.yml,title=pytest (exit {code})::{safe[:3000]}')
+          PYEOF
+          exit $code
