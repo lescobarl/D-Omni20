@@ -35,7 +35,8 @@ para cierres de hito y el gate de entrega **pre-push** (una vez por push).
 5. **En iteración conviene dejar `npm run test:watch` vivo** y correr el test de la tarea
    contra él (`test:file`), evitando el arranque en frío de Vitest (~30–45s por corrida).
 6. **Backend en iteración** (rápido, sin cobertura): `python -m pytest tests/<archivo> -q --no-cov
-   -p no:warnings` desde `backend/`; la cobertura se reserva para el CI (`python -m pytest`).
+   -p no:warnings` desde `backend/`; la suite completa (`python -m pytest`) corre en paralelo por
+   defecto (`-n auto`, pytest-xdist) y la cobertura se valida en el CI (`python -m pytest`).
 7. El guard test `frontend/src/test/protocolGuard.test.ts` protege estas reglas de forma
    estructural: si se degrada el protocolo, la suite falla.
 

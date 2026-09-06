@@ -39,6 +39,10 @@ for _stream in (sys.stdout, sys.stderr):
 # Contraseña común de referencia (misma que en tests/conftest.py).
 PASSWORD = "Password123!"
 
+# Super-admin de plataforma (control plane): no lleva membresía por tenant.
+SUPER_ADMIN_EMAIL = "superadmin@test.local"
+SUPER_ADMIN_NAME = "Super Admin"
+
 # (email, display_name, rol_en_tenant_dev)
 # Solo los 3 perfiles por tenant definidos (admin/configurador/operador).
 USERS: tuple[tuple[str, str, Role], ...] = (
@@ -100,6 +104,18 @@ def main() -> None:
         print(f"[provision] Tenant dev: '{settings.dev_tenant_slug}' ({tenant_id})")
         print(f"[provision] Contraseña común: {PASSWORD}")
 
+        # Super-admin de plataforma (sin membresía por tenant; control plane).
+        _seed_user(
+            container,
+            email=SUPER_ADMIN_EMAIL,
+            display_name=SUPER_ADMIN_NAME,
+            is_super_admin=True,
+        )
+        print(
+            f"[provision] Usuario listo: {SUPER_ADMIN_EMAIL} "
+            f"(display='{SUPER_ADMIN_NAME}', super_admin)"
+        )
+
         for email, display_name, role in USERS:
             user_id = _seed_user(
                 container,
@@ -119,7 +135,8 @@ def main() -> None:
         app = create_app(settings)
         with TestClient(app) as client:
             print("\n[validate] Validando POST /api/v1/auth/login ...")
-            for email, display_name, role in USERS:
+            accounts = [SUPER_ADMIN_EMAIL, *(email for email, _name, _role in USERS)]
+            for email in accounts:
                 response = client.post(
                     "/api/v1/auth/login",
                     json={"email": email, "password": PASSWORD},
