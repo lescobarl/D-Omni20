@@ -40,6 +40,60 @@ const COLOR_FIELDS: IColorField[] = [
 /** Etiqueta de un campo de texto de la apariencia. */
 type TextFieldKey = 'logoUrl' | 'fontFamily';
 
+/** Paleta predefinida de marca (arranque minimalista, ejecutivo). */
+interface IBrandPreset {
+  /** Nombre visible del tema. */
+  name: string;
+  /** Colores del tema que reemplaza (el resto del borrador se conserva). */
+  theme: Pick<
+    IAppTheme,
+    'primaryColor' | 'accentColor' | 'surfaceColor' | 'textColor' | 'brandBadge'
+  >;
+}
+
+const BRAND_PRESETS: IBrandPreset[] = [
+  {
+    name: 'Ejecutivo',
+    theme: {
+      primaryColor: '#1f2937',
+      accentColor: '#4f46e5',
+      surfaceColor: '#ffffff',
+      textColor: '#0f172a',
+      brandBadge: '#111827',
+    },
+  },
+  {
+    name: 'Confianza',
+    theme: {
+      primaryColor: '#2563eb',
+      accentColor: '#0ea5e9',
+      surfaceColor: '#f8fafc',
+      textColor: '#0f172a',
+      brandBadge: '#1d4ed8',
+    },
+  },
+  {
+    name: 'Esmeralda',
+    theme: {
+      primaryColor: '#059669',
+      accentColor: '#10b981',
+      surfaceColor: '#ffffff',
+      textColor: '#064e3b',
+      brandBadge: '#047857',
+    },
+  },
+  {
+    name: 'Ébano y cobre',
+    theme: {
+      primaryColor: '#18181b',
+      accentColor: '#b45309',
+      surfaceColor: '#fafaf9',
+      textColor: '#18181b',
+      brandBadge: '#0c0a09',
+    },
+  },
+];
+
 /**
  * Sección de apariencia del tenant con vista previa en vivo.
  *
@@ -117,6 +171,14 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
     setSaved(true);
   };
 
+  const applyPreset = (preset: IBrandPreset): void => {
+    const next = { ...draft, ...preset.theme };
+    setDraft(next);
+    setDirty(true);
+    setSaved(false);
+    applyTheme(next);
+  };
+
   const handleExtract = async (): Promise<void> => {
     if (url.trim() === '') {
       return;
@@ -188,6 +250,38 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
         <>
           <div className="mt-4 grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">
+              <fieldset>
+                <legend className="text-sm font-medium text-slate-700">Temas de marca</legend>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Puntos de partida minimalistas. Al elegir uno, ajusta la paleta abajo y guarda.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {BRAND_PRESETS.map((preset) => {
+                    const isActive = draft.primaryColor === preset.theme.primaryColor;
+                    return (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => applyPreset(preset)}
+                        className={
+                          isActive
+                            ? 'flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-medium text-white transition'
+                            : 'flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50'
+                        }
+                      >
+                        <span
+                          className="inline-block h-3 w-3 rounded-full border border-black/10"
+                          style={{ backgroundColor: preset.theme.primaryColor }}
+                          aria-hidden="true"
+                        />
+                        {preset.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
               <fieldset>
                 <legend className="text-sm font-medium text-slate-700">Paleta de marca</legend>
                 <div className="mt-2 space-y-3">

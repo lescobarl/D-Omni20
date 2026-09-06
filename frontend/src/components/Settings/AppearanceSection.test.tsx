@@ -51,6 +51,25 @@ describe('AppearanceSection', () => {
     expect(screen.getByLabelText('Tipografía')).toHaveValue('Inter');
   });
 
+  it('aplica un tema de marca predefinido a la paleta y a las variables CSS', async () => {
+    const service = makeService();
+    setTenantConfigService(service);
+
+    render(<AppearanceSection config={createTestConfig()} />);
+
+    await screen.findByLabelText('Color primario');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Confianza' }));
+    });
+
+    // La paleta cambia al preset y la variable CSS se actualiza en vivo.
+    expect(screen.getByLabelText('Color primario')).toHaveValue('#2563eb');
+    expect(screen.getByLabelText('Color de acento')).toHaveValue('#0ea5e9');
+    expect(screen.getByLabelText('Color de superficie')).toHaveValue('#f8fafc');
+    expect(document.documentElement.style.getPropertyValue('--omni-brand-500')).toBe('37 99 235');
+  });
+
   it('aplica el color editado en vivo como variable CSS y lo refleja en el código', async () => {
     const service = makeService();
     setTenantConfigService(service);
