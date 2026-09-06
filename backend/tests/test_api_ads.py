@@ -388,6 +388,37 @@ def test_capture_lead_without_utm_keeps_campaign_null(
     assert response.json()["ad_campaign_id"] is None
 
 
+def test_capture_lead_links_campaign_by_context_id(
+    client: TestClient, super_admin_token: str
+) -> None:
+    """Un lead sin UTM pero con `campaign_id` de contexto se atribuye a esa campaña.
+
+    Cubre el preview del editor: adjunta el `campaign_id` de la landing como
+    contexto; sin esta resolución el lead quedaría huérfano aunque exista la
+    campaña (eslabón ② por contexto directo).
+    """
+    headers = _fresh_tenant(super_admin_token)
+    _payload, campaign = _create_campaign(
+        client,
+        headers=headers,
+        name=f"Contexto {uuid.uuid4().hex[:8]}",
+        utm_campaign=f"ctx_{uuid.uuid4().hex[:8]}",
+    )
+    campaign_id = campaign["id"]
+
+    response = client.post(
+        "/api/v1/workflows/lead",
+        json=_lead_payload(
+            email=f"ctx-{uuid.uuid4().hex[:6]}@example.com",
+            phone=f"+52 55 9555 {uuid.uuid4().hex[:4]}",
+            metadata={"campaign_id": campaign_id},
+        ),
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["ad_campaign_id"] == campaign_id
+
+
 def test_capture_lead_ignores_disabled_campaign(
     client: TestClient, super_admin_token: str
 ) -> None:

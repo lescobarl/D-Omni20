@@ -402,6 +402,20 @@ class WorkflowService(IWorkflowService):
                     error=str(exc),
                 )
                 campaign = None
+            if campaign is None:
+                # Atribución por contexto directo (eslabón ②): cuando el lead no
+                # lleva firma UTM pero referencia un `campaign_id` (p. ej. el
+                # preview del editor adjunta el `campaign_id` de la landing), se
+                # liga a esa campaña del tenant si existe y está activa.
+                context_campaign_id = utm_meta.get("campaign_id")
+                if context_campaign_id:
+                    try:
+                        campaign = ads_repo.get(
+                            tenant_id=tenant_id,
+                            ad_campaign_id=uuid.UUID(str(context_campaign_id)),
+                        )
+                    except (ValueError, TypeError):
+                        campaign = None
             if campaign is not None:
                 lead.ad_campaign_id = campaign.id
                 ad_campaign_id = str(campaign.id)
