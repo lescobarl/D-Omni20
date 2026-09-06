@@ -14,6 +14,7 @@ import type {
   ILoginResponse,
   IMembershipRead,
   IUserRead,
+  IUserUpdate,
 } from '@/api/types';
 import type { ILogger } from '@/lib/logger';
 
@@ -29,6 +30,8 @@ export interface IAuthService {
   myMemberships(): Promise<IMembershipRead[]>;
   /** Cambia la contraseña del usuario autenticado. */
   changePassword(payload: IChangePasswordRequest): Promise<void>;
+  /** Actualiza el perfil del usuario autenticado (auto-edición, `display_name`). */
+  updateMe(payload: IUserUpdate): Promise<IUserRead>;
 }
 
 /** Implementación del puerto contra el backend HTTP vía `IApiClient`. */
@@ -43,6 +46,8 @@ export class BackendAuthService implements IAuthService {
   private static readonly OPERATION_MEMBERSHIPS = 'auth.myMemberships';
   /** Nombre de la operación de cambio de contraseña para trazabilidad. */
   private static readonly OPERATION_CHANGE_PASSWORD = 'auth.changePassword';
+  /** Nombre de la operación de auto-edición del perfil para trazabilidad. */
+  private static readonly OPERATION_UPDATE_ME = 'auth.updateMe';
 
   /**
    * @param apiClient - Cliente HTTP tipado del backend.
@@ -96,6 +101,16 @@ export class BackendAuthService implements IAuthService {
   public async changePassword(payload: IChangePasswordRequest): Promise<void> {
     this.logger?.info(BackendAuthService.OPERATION_CHANGE_PASSWORD);
     await this.apiClient.changePassword(payload);
+  }
+
+  /**
+   * Actualiza el perfil del usuario autenticado (sin cabecera de tenant).
+   * @param payload - Campos editables del propio perfil (`display_name`).
+   * @returns El perfil actualizado.
+   */
+  public async updateMe(payload: IUserUpdate): Promise<IUserRead> {
+    this.logger?.info(BackendAuthService.OPERATION_UPDATE_ME);
+    return this.apiClient.updateMe(payload);
   }
 }
 

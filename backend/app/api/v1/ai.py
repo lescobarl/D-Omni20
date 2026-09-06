@@ -37,7 +37,13 @@ def list_schemas(
     tenant_id: uuid.UUID = Depends(get_current_tenant),
     schema_repository: ISchemaRepository = Depends(get_schema_repository),
 ) -> Page[DeveloperSchemaRead]:
-    """Lista los JSON Schemas generados del tenant activo (paginado)."""
+    """Lista los JSON Schemas generados del tenant activo (paginado).
+
+    El listado vive aquí porque pertenece al dominio de generación IA (Fase 5):
+    lista lo que ``generate_schema`` produce. No compite con ``/schemas``
+    (Fase 6-7), cuyo router solo cubre validación y versionado de un schema
+    concreto (no expone listado), por lo que no hay ruta duplicada.
+    """
     items, total = schema_repository.list(
         tenant_id=tenant_id, page=pagination.page, page_size=pagination.page_size
     )

@@ -9,9 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IMembershipRead, IUserCreate, IUserRead, IUserUpdate } from '@/api/types';
 import { AppError } from '@/lib/errors';
-import type { IMembershipService } from '@/services/studioMembershipService';
 import type { IUserService } from '@/services/studioUserService';
-import { setMembershipService } from '@/store/membershipStore';
 import { setUserService, useUserStore } from '@/store/userStore';
 import { makeMembership, makeSuperAdminUser } from '@/test/authSession';
 
@@ -38,16 +36,7 @@ function makeUserService(overrides: Partial<IUserService> = {}): IUserService {
     delete: vi.fn(async () => undefined),
     listMemberships: vi.fn(async () => []),
     addMembership: vi.fn(async () => makeMembership('test-tenant', 'operador')),
-    ...overrides,
-  };
-}
-
-function makeMembershipService(overrides: Partial<IMembershipService> = {}): IMembershipService {
-  return {
-    list: vi.fn(async () => []),
-    add: vi.fn(async () => makeMembership('test-tenant', 'operador')),
-    update: vi.fn(async () => makeMembership('test-tenant', 'admin')),
-    remove: vi.fn(async () => undefined),
+    removeMembership: vi.fn(async () => undefined),
     ...overrides,
   };
 }
@@ -56,13 +45,11 @@ describe('userStore', () => {
   beforeEach(() => {
     useUserStore.getState().reset();
     setUserService(null);
-    setMembershipService(null);
   });
 
   afterEach(() => {
     useUserStore.getState().reset();
     setUserService(null);
-    setMembershipService(null);
   });
 
   it('parte del estado inicial por defecto', () => {
@@ -277,28 +264,28 @@ describe('userStore', () => {
     expect(useUserStore.getState().status).toBe('error');
   });
 
-  it('removeUserMembership delega la baja al servicio de membresías', async () => {
-    const membershipService = makeMembershipService();
-    setMembershipService(membershipService);
+  it('removeUserMembership delega la baja al servicio de usuarios', async () => {
+    const userService = makeUserService();
+    setUserService(userService);
 
     await useUserStore.getState().removeUserMembership('user-1', 'membership-tenant-a');
 
-    expect(membershipService.remove).toHaveBeenCalledWith('membership-tenant-a');
+    expect(userService.removeMembership).toHaveBeenCalledWith('user-1', 'membership-tenant-a');
     expect(useUserStore.getState().status).toBe('success');
   });
 
-  it('removeUserMembership marca error sin servicio de membresías', async () => {
+  it('removeUserMembership marca error sin servicio de usuarios', async () => {
     await useUserStore.getState().removeUserMembership('user-1', 'membership-tenant-a');
     const state = useUserStore.getState();
     expect(state.status).toBe('error');
-    expect(state.error).toBe('La gestión de membresías no está disponible.');
+    expect(state.error).toBe('La gestión de usuarios no está disponible.');
   });
 
   it('removeUserMembership marca error cuando falla la baja', async () => {
-    setMembershipService(
-      makeMembershipService({
-        remove: vi.fn(async () => {
-          throw new AppError('No se pudo eliminar la membresía.', 'members.remove');
+    setUserService(
+      makeUserService({
+        removeMembership: vi.fn(async () => {
+          throw new AppError('No se pudo eliminar la membresía.', 'users.memberships.remove');
         }),
       }),
     );

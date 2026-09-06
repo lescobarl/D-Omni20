@@ -79,6 +79,7 @@ function makeUserService(users: IUserRead[], overrides: Partial<IUserService> = 
     addMembership: vi.fn(async () => {
       throw new Error('no usado');
     }),
+    removeMembership: vi.fn(async () => undefined),
     ...overrides,
   };
 }

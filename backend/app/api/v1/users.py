@@ -171,3 +171,31 @@ def add_user_membership(
     )
     session.commit()
     return MembershipRead.model_validate(membership)
+
+
+@router.delete(
+    "/{user_id}/memberships/{membership_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_user_membership(
+    user_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _admin: User = Depends(require_super_admin),
+    membership_repository: IMembershipRepository = Depends(
+        get_membership_repository
+    ),
+) -> Response:
+    """Elimina (soft-delete) la membresía de un usuario de la plataforma."""
+    memberships = membership_repository.list_by_user(user_id=user_id)
+    target = next((m for m in memberships if m.id == membership_id), None)
+    if target is None:
+        raise NotFoundError(
+            f"Membresía '{membership_id}' no encontrada para el usuario '{user_id}'"
+        )
+    membership_repository.delete(
+        user_id=user_id,
+        tenant_id=target.tenant_id,
+    )
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

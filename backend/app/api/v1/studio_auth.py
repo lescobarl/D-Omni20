@@ -17,20 +17,29 @@ Regla CLAUDE (DI): la lógica de negocio se delega en :class:`AuthService`
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy.orm import Session
 
 from app.api.deps import (
     get_auth_service,
     get_current_user,
     get_membership_repository,
+    get_session,
     get_tenant_repository,
+    get_user_repository,
 )
+from app.core.errors import ConflictError, NotFoundError
 from app.models.user import User
-from app.repositories.interfaces import IMembershipRepository, ITenantRepository
+from app.repositories.interfaces import (
+    IMembershipRepository,
+    ITenantRepository,
+    IUserRepository,
+)
 from app.schemas.membership import MembershipRead
 from app.schemas.user import (
     ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
+    MeUpdate,
     UserRead,
 )
 from app.services.interfaces import IAuthService
@@ -72,6 +81,31 @@ def me(
 ) -> UserRead:
     """Devuelve el perfil del usuario autenticado (Bearer)."""
     return UserRead.model_validate(user)
+
+
+@router.patch("/me", response_model=UserRead)
+def update_me(
+    data: MeUpdate,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+    user_repository: IUserRepository = Depends(get_user_repository),
+) -> UserRead:
+    """Actualiza el perfil del usuario autenticado (solo ``display_name``).
+
+    Los flags de plataforma (``is_super_admin``/``is_active``) y el password no
+    son editables por el propio usuario: se gestionan por super-admin vía
+    ``/users`` o por el flujo ``/auth/change-password``.
+    """
+    if data.display_name is None or not data.display_name.strip():
+        raise ConflictError("El nombre visible no puede estar vacío")
+    updated = user_repository.update(
+        user.id,
+        display_name=data.display_name.strip(),
+    )
+    if updated is None:
+        raise NotFoundError(f"Usuario '{user.id}' no encontrado")
+    session.commit()
+    return UserRead.model_validate(updated)
 
 
 @router.get("/me/memberships", response_model=list[MembershipRead])

@@ -26,7 +26,6 @@ import {
   type IActiveTenant,
 } from '@/lib/tenantContext';
 import type { IAuthService } from '@/services/studioAuthService';
-import { getUserService } from '@/store/userStore';
 
 /** Estado del flujo de autenticación. */
 export type AuthStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -58,9 +57,8 @@ export interface IAuthState {
   /** Cambia la contraseña del usuario autenticado (verifica la actual). */
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   /**
-   * Actualiza el perfil del usuario autenticado (auto-edición sobre su propio id).
-   * El backend no expone un `PATCH /auth/me`; se reutiliza `updateUser` del
-   * servicio de usuarios sobre el id de la sesión actual y se refleja en `user`.
+   * Actualiza el perfil del usuario autenticado vía `PATCH /auth/me` (auto-edición
+   * acotada a su propio perfil) y refleja el cambio en el estado de sesión.
    */
   updateMe(payload: IUserUpdate): Promise<IUserRead | null>;
   /** Reinicia el estado al inicial por defecto (sin cerrar sesión en backend). */
@@ -309,20 +307,19 @@ export const useAuthStore = create<IAuthState>()((set, get) => ({
 
   updateMe: async (payload: IUserUpdate) => {
     const currentUser = get().user;
-    const userService = getUserService();
     if (currentUser === null) {
       set({ status: 'error', error: 'No hay una sesión activa para actualizar el perfil.' });
       return null;
     }
-    if (userService === null) {
-      set({ status: 'error', error: 'El servicio de usuarios no está disponible.' });
+    if (service === null) {
+      set({ status: 'error', error: SERVICE_UNAVAILABLE_MESSAGE });
       return null;
     }
     set({ status: 'loading', error: null });
     try {
-      // Auto-edición: el backend no expone `PATCH /auth/me`, así que se actualiza
-      // el propio usuario por su id (control plane) y se refleja en el estado.
-      const updated = await userService.update(currentUser.id, payload);
+      // Auto-edición: el backend expone `PATCH /auth/me` con el scope del propio
+      // usuario autenticado; se refleja el resultado en el estado de sesión.
+      const updated = await service.updateMe(payload);
       set({
         user: updated,
         isSuperAdmin: updated.is_super_admin,

@@ -11,9 +11,7 @@ import type { IUserRead, IUserUpdate } from '@/api/types';
 import { AppError } from '@/lib/errors';
 import { resetActiveTenant, setActiveTenant } from '@/lib/tenantContext';
 import type { IAuthService } from '@/services/studioAuthService';
-import type { IUserService } from '@/services/studioUserService';
 import { setAuthService, useAuthStore } from '@/store/authStore';
-import { setUserService } from '@/store/userStore';
 import {
   makeMembership,
   makeRegularUser,
@@ -32,18 +30,7 @@ function makeAuthService(overrides: Partial<IAuthService> = {}): IAuthService {
     me: vi.fn(async () => makeSuperAdminUser()),
     myMemberships: vi.fn(async () => [makeMembership('test-tenant', 'admin')]),
     changePassword: vi.fn(async () => undefined),
-    ...overrides,
-  };
-}
-
-function makeUserService(overrides: Partial<IUserService> = {}): IUserService {
-  return {
-    list: vi.fn(async () => []),
-    create: vi.fn(async () => makeRegularUser()),
-    update: vi.fn(async () => makeRegularUser()),
-    delete: vi.fn(async () => undefined),
-    listMemberships: vi.fn(async () => []),
-    addMembership: vi.fn(async () => makeMembership('test-tenant', 'operador')),
+    updateMe: vi.fn(async () => makeRegularUser()),
     ...overrides,
   };
 }
@@ -52,13 +39,13 @@ describe('authStore', () => {
   beforeEach(() => {
     resetActiveTenant();
     resetAuthSession();
-    setUserService(null);
+    setAuthService(null);
   });
 
   afterEach(() => {
     resetActiveTenant();
     resetAuthSession();
-    setUserService(null);
+    setAuthService(null);
   });
 
   it('parte del estado inicial por defecto', () => {
@@ -313,13 +300,13 @@ describe('authStore', () => {
     expect(useAuthStore.getState().status).toBe('error');
   });
 
-  it('updateMe actualiza el perfil del usuario autenticado por su id', async () => {
+  it('updateMe actualiza el perfil del usuario autenticado vía el servicio de auth', async () => {
     const user = makeRegularUser();
     const updated: IUserRead = { ...user, display_name: 'Nuevo Nombre' };
-    const userService = makeUserService({
-      update: vi.fn(async () => updated),
+    const authService = makeAuthService({
+      updateMe: vi.fn(async () => updated),
     });
-    setUserService(userService);
+    setAuthService(authService);
     useAuthStore.setState({
       user,
       memberships: [],
@@ -332,7 +319,7 @@ describe('authStore', () => {
     const payload: IUserUpdate = { display_name: 'Nuevo Nombre' };
     const result = await useAuthStore.getState().updateMe(payload);
 
-    expect(userService.update).toHaveBeenCalledWith(user.id, payload);
+    expect(authService.updateMe).toHaveBeenCalledWith(payload);
     expect(result?.display_name).toBe('Nuevo Nombre');
     const state = useAuthStore.getState();
     expect(state.user?.display_name).toBe('Nuevo Nombre');
@@ -342,9 +329,9 @@ describe('authStore', () => {
   it('updateMe refleja el cambio de is_super_admin en el estado', async () => {
     const user = makeRegularUser();
     const promoted: IUserRead = { ...user, is_super_admin: true };
-    setUserService(
-      makeUserService({
-        update: vi.fn(async () => promoted),
+    setAuthService(
+      makeAuthService({
+        updateMe: vi.fn(async () => promoted),
       }),
     );
     useAuthStore.setState({
@@ -371,7 +358,7 @@ describe('authStore', () => {
     expect(state.error).toBe('No hay una sesión activa para actualizar el perfil.');
   });
 
-  it('updateMe devuelve null y marca error sin servicio de usuarios', async () => {
+  it('updateMe devuelve null y marca error sin servicio de autenticación', async () => {
     useAuthStore.setState({
       user: makeRegularUser(),
       memberships: [],
@@ -385,14 +372,14 @@ describe('authStore', () => {
     expect(result).toBeNull();
     const state = useAuthStore.getState();
     expect(state.status).toBe('error');
-    expect(state.error).toBe('El servicio de usuarios no está disponible.');
+    expect(state.error).toBe('El servicio de autenticación no está disponible.');
   });
 
   it('updateMe devuelve null y marca error cuando el servicio falla', async () => {
-    setUserService(
-      makeUserService({
-        update: vi.fn(async () => {
-          throw new AppError('No se pudo actualizar el perfil.', 'users.update');
+    setAuthService(
+      makeAuthService({
+        updateMe: vi.fn(async () => {
+          throw new AppError('No se pudo actualizar el perfil.', 'auth.updateMe');
         }),
       }),
     );

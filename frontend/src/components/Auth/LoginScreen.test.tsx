@@ -87,6 +87,9 @@ describe('LoginScreen', () => {
       }),
       myMemberships: vi.fn(async () => []),
       changePassword: vi.fn(async () => undefined),
+      updateMe: vi.fn(async () => {
+        throw new Error('no usado');
+      }),
     };
     setAuthService(authService);
 
@@ -116,6 +119,7 @@ describe('LoginScreen', () => {
       me: vi.fn(async () => makeSuperAdminUser()),
       myMemberships: vi.fn(async () => []),
       changePassword: vi.fn(async () => undefined),
+      updateMe: vi.fn(async () => makeSuperAdminUser()),
     };
     setAuthService(authService);
 

@@ -45,6 +45,12 @@ class UserRead(ORMModel):
     updated_at: datetime
 
 
+class MeUpdate(BaseModel):
+    """Payload para auto-editar el perfil del usuario autenticado (PATCH /auth/me)."""
+
+    display_name: str | None = Field(default=None, max_length=255)
+
+
 class LoginRequest(BaseModel):
     """Credenciales de acceso al estudio."""
 

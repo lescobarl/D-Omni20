@@ -1,5 +1,10 @@
 """Endpoints de OAuth 2.0 para Google Calendar (autorización y callback).
 
+Mitad OAuth de ``/auth``: estas rutas (``/auth/google/*``) son disjuntas de la
+mitad de sesión del estudio (``/auth/login|me|logout|change-password``, ver
+``studio_auth.py``). Se mantienen en routers separados porque su contrato y su
+ciclo de vida difieren (OAuth externo con callback fijo vs sesión propia).
+
 Contrato:
 - ``GET /auth/google/authorize`` devuelve la URL de autorización; responde 501
   cuando el proveedor no está configurado (sin credenciales OAuth).
@@ -17,7 +22,7 @@ from app.api.deps import get_google_calendar_provider
 from app.services.providers import decode_oauth_state
 from app.services.workflow_interfaces import IGoogleCalendarProvider
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth", "google-oauth"])
 
 
 @router.get("/google/authorize")

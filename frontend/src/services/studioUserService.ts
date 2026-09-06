@@ -31,6 +31,8 @@ export interface IUserService {
   listMemberships(userId: string): Promise<IMembershipRead[]>;
   /** Añade una membresía (tenant+rol) a un usuario. */
   addMembership(payload: IMembershipCreate): Promise<IMembershipRead>;
+  /** Elimina la membresía (tenant+rol) de un usuario. */
+  removeMembership(userId: string, membershipId: string): Promise<void>;
 }
 
 /** Implementación del puerto contra el backend HTTP vía `IApiClient`. */
@@ -47,6 +49,8 @@ export class BackendUserService implements IUserService {
   private static readonly OPERATION_MEMBERSHIPS = 'user.memberships.list';
   /** Nombre de la operación de alta de membresía para trazabilidad. */
   private static readonly OPERATION_ADD_MEMBERSHIP = 'user.memberships.add';
+  /** Nombre de la operación de baja de membresía para trazabilidad. */
+  private static readonly OPERATION_REMOVE_MEMBERSHIP = 'user.memberships.remove';
 
   /**
    * @param apiClient - Cliente HTTP tipado del backend.
@@ -117,6 +121,16 @@ export class BackendUserService implements IUserService {
       tenantId: payload.tenant_id,
     });
     return this.apiClient.addUserMembership(payload);
+  }
+
+  /**
+   * Elimina la membresía (tenant+rol) de un usuario (sin cabecera de tenant).
+   * @param userId - Identificador del usuario propietario de la membresía.
+   * @param membershipId - Identificador de la membresía a eliminar.
+   */
+  public async removeMembership(userId: string, membershipId: string): Promise<void> {
+    this.logger?.info(BackendUserService.OPERATION_REMOVE_MEMBERSHIP, { userId });
+    await this.apiClient.deleteUserMembership(userId, membershipId);
   }
 }
 

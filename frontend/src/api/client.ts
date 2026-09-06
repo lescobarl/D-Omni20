@@ -622,6 +622,8 @@ export interface IApiClient {
   getMyMemberships(): Promise<IMembershipRead[]>;
   /** Cambia la contraseña del usuario autenticado (sin tenant). */
   changePassword(payload: IChangePasswordRequest): Promise<void>;
+  /** Actualiza el perfil del usuario autenticado (sin tenant). */
+  updateMe(payload: IUserUpdate): Promise<IUserRead>;
 
   // ── Usuarios de plataforma (control plane, super-admin) ────────────────────
   /** Lista los usuarios de la plataforma (sin cabecera de tenant). */
@@ -636,6 +638,8 @@ export interface IApiClient {
   listUserMemberships(userId: string): Promise<IMembershipRead[]>;
   /** Añade una membresía (tenant+rol) a un usuario (sin cabecera de tenant). */
   addUserMembership(payload: IMembershipCreate): Promise<IMembershipRead>;
+  /** Elimina la membresía (tenant+rol) de un usuario (sin cabecera de tenant). */
+  deleteUserMembership(userId: string, membershipId: string): Promise<void>;
 
   // ── Miembros por tenant (RBAC, admin) ──────────────────────────────────────
   /** Lista los miembros del tenant activo (con cabecera de tenant). */
@@ -2337,6 +2341,15 @@ export class HttpApiClient implements IApiClient {
     });
   }
 
+  /** Actualiza el perfil del usuario autenticado (sin tenant). */
+  public async updateMe(payload: IUserUpdate): Promise<IUserRead> {
+    return this.request<IUserRead>('PATCH', API_PATHS.authMe, {
+      operation: 'api.auth.updateMe',
+      tenant: false,
+      body: payload,
+    });
+  }
+
   // ── Usuarios de plataforma (control plane, super-admin) ───────────────────
 
   /** Lista los usuarios de la plataforma (sin cabecera de tenant). */
@@ -2392,6 +2405,14 @@ export class HttpApiClient implements IApiClient {
         body: payload,
       },
     );
+  }
+
+  /** Elimina la membresía (tenant+rol) de un usuario (sin cabecera de tenant). */
+  public async deleteUserMembership(userId: string, membershipId: string): Promise<void> {
+    await this.request<void>('DELETE', `${API_PATHS.users}/${userId}/memberships/${membershipId}`, {
+      operation: 'api.users.memberships.delete',
+      tenant: false,
+    });
   }
 
   // ── Miembros por tenant (RBAC, admin) ─────────────────────────────────────

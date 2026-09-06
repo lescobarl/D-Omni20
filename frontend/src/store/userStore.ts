@@ -21,7 +21,6 @@ import type {
 } from '@/api/types';
 import { AppError } from '@/lib/errors';
 import type { IUserService } from '@/services/studioUserService';
-import { getMembershipService } from '@/store/membershipStore';
 
 /** Estado de un flujo de usuarios de plataforma. */
 export type UserStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -48,11 +47,8 @@ export interface IUserState {
   /** Agrega una membresía (tenant+rol) a un usuario. */
   addUserMembership(payload: IMembershipCreate): Promise<IMembershipRead | null>;
   /**
-   * Elimina una membresía (tenant+rol) de un usuario. El backend no expone un
-   * `DELETE /users/{id}/memberships/{membership_id}`; la baja real se realiza a
-   * través del servicio de membresías (`DELETE /members/{membership_id}`), que
-   * es la ruta que ya usaba la UI. El `userId` se conserva en la firma para
-   * mantener la semántica de la operación sobre el usuario.
+   * Elimina una membresía (tenant+rol) de un usuario vía
+   * `DELETE /users/{id}/memberships/{membership_id}` (control plane).
    */
   removeUserMembership(userId: string, membershipId: string): Promise<void>;
 
@@ -211,17 +207,14 @@ export const useUserStore = create<IUserState>()((set, get) => ({
     }
   },
 
-  removeUserMembership: async (_userId: string, membershipId: string) => {
-    const membershipService = getMembershipService();
-    if (membershipService === null) {
-      set({ status: 'error', error: 'La gestión de membresías no está disponible.' });
+  removeUserMembership: async (userId: string, membershipId: string) => {
+    if (service === null) {
+      set({ status: 'error', error: 'La gestión de usuarios no está disponible.' });
       return;
     }
     set({ status: 'loading', error: null });
     try {
-      // La baja real se delega al servicio de membresías (ruta tenant-scoped
-      // `DELETE /members/{membership_id}`), igual que hacía la UI previamente.
-      await membershipService.remove(membershipId);
+      await service.removeMembership(userId, membershipId);
       set({ status: 'success', error: null });
     } catch (error) {
       set({

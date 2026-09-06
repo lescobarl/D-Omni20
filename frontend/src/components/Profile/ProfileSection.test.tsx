@@ -17,7 +17,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProfileSection } from '@/components/Profile/ProfileSection';
 import { setAuthService, useAuthStore } from '@/store/authStore';
-import { setUserService } from '@/store/userStore';
 import {
   makeMembership,
   makeRegularUser,
@@ -25,10 +24,9 @@ import {
   resetAuthSession,
   seedAuthenticatedSession,
 } from '@/test/authSession';
-import type { IUserService } from '@/services/studioUserService';
 import type { IAuthService } from '@/services/studioAuthService';
 
-/** Construye un servicio de autenticación de prueba con `changePassword` espiable. */
+/** Construye un servicio de autenticación de prueba con acciones espiables. */
 function makeAuthService(overrides: Partial<IAuthService> = {}): IAuthService {
   return {
     login: vi.fn(async () => {
@@ -38,23 +36,7 @@ function makeAuthService(overrides: Partial<IAuthService> = {}): IAuthService {
     me: vi.fn(async () => makeSuperAdminUser()),
     myMemberships: vi.fn(async () => []),
     changePassword: vi.fn(async () => undefined),
-    ...overrides,
-  };
-}
-
-/** Construye un servicio de usuarios de prueba con `update` espiable. */
-function makeUserService(overrides: Partial<IUserService> = {}): IUserService {
-  return {
-    list: vi.fn(async () => []),
-    create: vi.fn(async () => {
-      throw new Error('no usado');
-    }),
-    update: vi.fn(async () => makeSuperAdminUser()),
-    delete: vi.fn(async () => undefined),
-    listMemberships: vi.fn(async () => []),
-    addMembership: vi.fn(async () => {
-      throw new Error('no usado');
-    }),
+    updateMe: vi.fn(async () => makeSuperAdminUser()),
     ...overrides,
   };
 }
@@ -62,12 +44,12 @@ function makeUserService(overrides: Partial<IUserService> = {}): IUserService {
 describe('ProfileSection', () => {
   beforeEach(() => {
     resetAuthSession();
-    setUserService(null);
+    setAuthService(null);
   });
 
   afterEach(() => {
     resetAuthSession();
-    setUserService(null);
+    setAuthService(null);
   });
 
   it('muestra los datos de la cuenta del usuario autenticado', () => {
@@ -138,10 +120,10 @@ describe('ProfileSection', () => {
   it('edita el nombre visible y delega en updateMe', async () => {
     seedAuthenticatedSession();
     const updatedUser = { ...makeSuperAdminUser(), display_name: 'Nuevo Nombre' };
-    const userService = makeUserService({
-      update: vi.fn(async () => updatedUser),
+    const authService = makeAuthService({
+      updateMe: vi.fn(async () => updatedUser),
     });
-    setUserService(userService);
+    setAuthService(authService);
 
     const user = userEvent.setup();
     render(<ProfileSection />);
@@ -157,9 +139,7 @@ describe('ProfileSection', () => {
       await user.click(screen.getByRole('button', { name: 'Guardar' }));
     });
 
-    expect(userService.update).toHaveBeenCalledWith('user-superadmin', {
-      display_name: 'Nuevo Nombre',
-    });
+    expect(authService.updateMe).toHaveBeenCalledWith({ display_name: 'Nuevo Nombre' });
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Perfil actualizado correctamente.',
     );
@@ -168,12 +148,13 @@ describe('ProfileSection', () => {
 
   it('muestra el error del store cuando updateMe no puede actualizar', async () => {
     seedAuthenticatedSession();
-    const userService = makeUserService({
-      update: vi.fn(async () => {
-        throw new Error('Fallo de red');
+    setAuthService(
+      makeAuthService({
+        updateMe: vi.fn(async () => {
+          throw new Error('Fallo de red');
+        }),
       }),
-    });
-    setUserService(userService);
+    );
 
     const user = userEvent.setup();
     render(<ProfileSection />);

@@ -1511,6 +1511,39 @@ describe('HttpApiClient', () => {
     expect(calls[0].init?.method).toBe('DELETE');
     expect(calls[0].init?.headers).toMatchObject({ 'X-Tenant-Id': 'test-tenant' });
   });
+
+  it('actualiza el perfil autenticado con PATCH /auth/me (sin tenant)', async () => {
+    handler = () =>
+      jsonResponse(200, {
+        id: 'u1',
+        email: 'admin@omni2.app',
+        display_name: 'Nuevo Nombre',
+        is_super_admin: false,
+        is_active: true,
+        last_login_at: null,
+        created_at: '',
+        revision: 0,
+        updated_at: '',
+      });
+
+    const updated = await client.updateMe({ display_name: 'Nuevo Nombre' });
+
+    expect(updated.display_name).toBe('Nuevo Nombre');
+    expect(calls[0].input).toBe('http://localhost:8000/api/v1/auth/me');
+    expect(calls[0].init?.method).toBe('PATCH');
+    expect(JSON.parse(calls[0].init?.body as string)).toEqual({ display_name: 'Nuevo Nombre' });
+    expect(calls[0].init?.headers).not.toHaveProperty('X-Tenant-Id');
+  });
+
+  it('elimina una membresía de usuario con DELETE /users/{id}/memberships/{membership_id}', async () => {
+    handler = () => emptyResponse(204);
+
+    await client.deleteUserMembership('u1', 'mem-1');
+
+    expect(calls[0].input).toBe('http://localhost:8000/api/v1/users/u1/memberships/mem-1');
+    expect(calls[0].init?.method).toBe('DELETE');
+    expect(calls[0].init?.headers).not.toHaveProperty('X-Tenant-Id');
+  });
 });
 
 describe('extractApiErrorMessage', () => {

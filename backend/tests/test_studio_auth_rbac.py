@@ -191,6 +191,36 @@ def test_me_invalid_token_returns_401(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "auth.unauthorized"
 
 
+def test_me_update_display_name(
+    client: TestClient, super_admin_token: str
+) -> None:
+    response = client.patch(
+        "/api/v1/auth/me",
+        headers=_auth(super_admin_token),
+        json={"display_name": "Super Admin Renombrado"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["display_name"] == "Super Admin Renombrado"
+    assert body["email"] == "superadmin@test.local"
+
+
+def test_me_update_blank_display_name_returns_409(
+    client: TestClient, super_admin_token: str
+) -> None:
+    response = client.patch(
+        "/api/v1/auth/me",
+        headers=_auth(super_admin_token),
+        json={"display_name": "   "},
+    )
+    assert response.status_code == 409, response.text
+
+
+def test_me_update_requires_authentication(client: TestClient) -> None:
+    response = client.patch("/api/v1/auth/me", json={"display_name": "X"})
+    assert response.status_code == 401, response.text
+
+
 def test_my_memberships_lists_tenant_roles(
     client: TestClient, tenant_admin_token: str
 ) -> None:
@@ -509,6 +539,55 @@ def test_add_user_membership_duplicate_returns_409(
         json=payload,
     )
     assert second.status_code == 409, second.text
+
+
+def test_remove_user_membership(
+    client: TestClient, super_admin_token: str, tenant_id: uuid.UUID
+) -> None:
+    email = _unique_email("rmmem")
+    created = client.post(
+        "/api/v1/users",
+        headers=_auth(super_admin_token),
+        json={"email": email, "password": "Password123!"},
+    )
+    assert created.status_code == 201, created.text
+    user_id = created.json()["id"]
+
+    added = client.post(
+        f"/api/v1/users/{user_id}/memberships",
+        headers=_auth(super_admin_token),
+        json={
+            "user_id": user_id,
+            "tenant_id": str(tenant_id),
+            "role": Role.OPERADOR.value,
+        },
+    )
+    assert added.status_code == 201, added.text
+    membership_id = added.json()["id"]
+
+    removed = client.delete(
+        f"/api/v1/users/{user_id}/memberships/{membership_id}",
+        headers=_auth(super_admin_token),
+    )
+    assert removed.status_code == 204, removed.text
+
+    listing = client.get(
+        f"/api/v1/users/{user_id}/memberships",
+        headers=_auth(super_admin_token),
+    )
+    assert listing.status_code == 200, listing.text
+    assert listing.json() == []
+
+
+def test_remove_user_membership_not_found_returns_404(
+    client: TestClient, super_admin_token: str
+) -> None:
+    user_id = uuid.uuid4()
+    removed = client.delete(
+        f"/api/v1/users/{user_id}/memberships/{uuid.uuid4()}",
+        headers=_auth(super_admin_token),
+    )
+    assert removed.status_code == 404, removed.text
 
 
 # ────────────────────────────────────────────────────────────────────────────

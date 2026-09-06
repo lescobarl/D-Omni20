@@ -4,6 +4,12 @@ Router bajo el prefijo ``/members`` que opera sobre el **tenant activo**
 (resuelto por ``get_current_tenant`` desde la cabecera ``X-Tenant-Id``). Permite
 a un admin del tenant listar, añadir, cambiar el rol y eliminar miembros.
 
+Frontera con el control-plane: este router gestiona la **plantilla del tenant
+activo** (operativa diaria de un admin), mientras que ``/users/{id}/memberships``
+(``users.py``, super-admin) gestiona las membresías de **usuarios de plataforma**
+de forma global. Ambos comparten el repositorio de membresías por diseño; no hay
+lógica duplicada.
+
 Regla CLAUDE (DI): la lógica de negocio se delega en :class:`AuthService`
 (inyectado vía ``get_auth_service``) para el hashing de contraseñas al crear un
 usuario nuevo; los repositorios se inyectan por ``Depends``. Nunca se instancia

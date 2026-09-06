@@ -56,6 +56,9 @@ describe('App — puerta de autenticación y RBAC', () => {
       changePassword: async () => {
         throw new Error('no usado en esta prueba');
       },
+      updateMe: async () => {
+        throw new Error('no usado en esta prueba');
+      },
     };
     setAuthService(authService);
 
