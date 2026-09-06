@@ -40,6 +40,7 @@ from app.repositories.sqlalchemy_repositories import (
     SqlAlchemyCampaignRecipientRepository,
     SqlAlchemyCampaignRepository,
     SqlAlchemyContactRepository,
+    SqlAlchemyInterventionRepository,
     SqlAlchemyKeywordRepository,
     SqlAlchemyOAuthTokenStore,
     SqlAlchemyRecipientFileRepository,
@@ -334,6 +335,11 @@ class Container:
                 audit_service_factory=lambda session: AuditService(
                     repository=SqlAlchemyAuditRepository(session),
                     logger=self.logger,
+                ),
+                # Escalado automático (eslabón ⑤): si el bot responde con
+                # `needs_human`, la conversación crea una intervención `pending`.
+                intervention_repository_factory=lambda session: SqlAlchemyInterventionRepository(
+                    session
                 ),
                 workflow_service_factory=lambda session: WorkflowService(
                     repository=SqlAlchemyWorkflowRepository(session),

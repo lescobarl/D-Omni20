@@ -55,6 +55,7 @@ from app.core.logging import ILogger
 from app.core.tenancy import set_app_current_tenant
 from app.models.base import utcnow
 from app.repositories.interfaces import IKeywordRepository
+from app.repositories.operations_interfaces import IInterventionRepository
 from app.schemas.workflow import (
     AppointmentRequest,
     CheckoutRequest,
@@ -294,6 +295,61 @@ def _available_services(bundle: CompanyContextBundle) -> list[str]:
     return services
 
 
+def _auto_escalate(
+    repo: IInterventionRepository,
+    *,
+    tenant_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    notes: str,
+    logger: ILogger,
+) -> bool:
+    """Crea una intervención ``pending`` idempotente para la conversación.
+
+    Eslabón ⑤ (Vendedor): cuando el bot responde con ``needs_human`` la
+    conversación entra en la cola de intervención humana. Si ya existe una
+    intervención abierta (``pending``/``assigned``) para esa conversación no se
+    duplica (idempotencia); si no hay ninguna, se crea ``pending`` sin operador.
+
+    @param repo   Repositorio de intervenciones (inyectado).
+    @param tenant_id  Tenant de la conversación.
+    @param conversation_id  Conversación que requiere atención humana.
+    @param notes   Motivo/contexto del escalado.
+    @param logger  Registrador para trazar el escalado.
+    @returns ``True`` si se creó una intervención nueva; ``False`` si ya existía.
+    """
+    open_states = ("pending", "assigned")
+    for state in open_states:
+        interventions, _total = repo.list_by_state(
+            tenant_id=tenant_id,
+            state=state,
+            page=1,
+            page_size=1000,
+        )
+        if any(item.conversation_id == conversation_id for item in interventions):
+            logger.info(
+                "bot.conversation.already_escalated",
+                "La conversación ya tiene una intervención abierta",
+                conversation_id=str(conversation_id),
+                state=state,
+            )
+            return False
+    repo.create(
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        state="pending",
+        operator=None,
+        notes=notes,
+        assigned_at=None,
+        resolved_at=None,
+    )
+    logger.info(
+        "bot.conversation.escalated",
+        "Conversación escalada a intervención humana (pending)",
+        conversation_id=str(conversation_id),
+    )
+    return True
+
+
 class ConversationService(IConversationService):
     """Caso de uso de conversación del bot (Fase 6) — delega en workflows por DI."""
 
@@ -310,6 +366,9 @@ class ConversationService(IConversationService):
         audit_service_factory: Callable[[Session], IAuditService],
         workflow_service_factory: Callable[[Session], IWorkflowService],
         provider_router_factory: Callable[..., IResponseProvider] = build_response_provider_router,
+        intervention_repository_factory: (
+            Callable[[Session], IInterventionRepository] | None
+        ) = None,
     ) -> None:
         self._database = database
         self._context_bundle_service = context_bundle_service
@@ -321,6 +380,7 @@ class ConversationService(IConversationService):
         self._audit_service_factory = audit_service_factory
         self._workflow_service_factory = workflow_service_factory
         self._provider_router_factory = provider_router_factory
+        self._intervention_repository_factory = intervention_repository_factory
 
     # ── Punto de entrada -----------------------------------------------------
     def handle_inbound(
@@ -440,6 +500,29 @@ class ConversationService(IConversationService):
                     "external_contact_id": message.external_contact_id,
                 },
             )
+
+        if (
+            response.needs_human
+            and self._intervention_repository_factory is not None
+        ):
+            try:
+                _auto_escalate(
+                    self._intervention_repository_factory(session),
+                    tenant_id=bundle.tenant_id,
+                    conversation_id=conversation.id,
+                    notes=(
+                        "Escalado automático: el bot requirió atención humana "
+                        "(needs_human)."
+                    ),
+                    logger=self._logger,
+                )
+            except Exception as exc:
+                self._logger.warning(
+                    "bot.conversation.escalation_failed",
+                    message="No se pudo crear la intervención humana del escalado",
+                    conversation_id=str(conversation.id),
+                    error=str(exc),
+                )
 
         self._logger.info(
             "bot.conversation.replied",
