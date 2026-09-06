@@ -186,6 +186,7 @@ export function makeApiClientMock(): IApiClient {
     getMe: vi.fn(),
     getMyMemberships: vi.fn(),
     changePassword: vi.fn(),
+    updateMe: vi.fn(),
     // Usuarios de plataforma (control plane, super-admin).
     listUsers: vi.fn(),
     createUser: vi.fn(),
@@ -193,6 +194,7 @@ export function makeApiClientMock(): IApiClient {
     deleteUser: vi.fn(),
     listUserMemberships: vi.fn(),
     addUserMembership: vi.fn(),
+    deleteUserMembership: vi.fn(),
     // Miembros por tenant (RBAC, admin).
     listMembers: vi.fn(),
     addMember: vi.fn(),
