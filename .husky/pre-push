@@ -1,8 +1,7 @@
 #!/usr/bin/env sh
-# OmniBotIA Studio - pre-push (gate de entrega)
-# La suite completa (`test:full`) se ejecuta UNA vez por push (entrega), no en
-# cada commit. Mantiene la validación total del hito sin penalizar la iteración.
+# OmniBotIA Studio - pre-push (verificación ligera local)
+# La suite completa (`test:full`) la ejecuta el CI (GitHub Actions) en cada push.
+# Aquí solo corre la puerta de tipos: el push local es casi instantáneo y el gate
+# real de entrega (suite + backend + validadores) queda en remoto.
 cd "$(dirname "$0")/../frontend" || exit 1
-echo "pre-push: puerta de tipos + suite completa (test:full)..."
 npm run typecheck
-npm run test:full

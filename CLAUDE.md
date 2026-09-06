@@ -29,9 +29,14 @@ para cierres de hito y el gate de entrega **pre-push** (una vez por push).
 1. `npm test` DEBE incluir `--changed` (nunca debe volver a correr toda la suite).
 2. El script `test:full` NO debe eliminarse: es el único camino explícito a la suite completa.
 3. El **pre-commit es LIGERO** (lint-staged + puerta de tipos) para no penalizar cada commit.
-4. El gate de entrega **pre-push ejecuta `npm run test:full`** (el push valida la suite completa
-   una sola vez, no por cada commit).
-5. El guard test `frontend/src/test/protocolGuard.test.ts` protege estas reglas de forma
+4. El gate de entrega lo ejecuta el **CI (GitHub Actions)** en cada push: corre `test:full`,
+   los validadores y el backend. El **pre-push local NO ejecuta `test:full`** (solo
+   typecheck) para que el push sea casi instantáneo y la suite se valide en remoto.
+5. **En iteración conviene dejar `npm run test:watch` vivo** y correr el test de la tarea
+   contra él (`test:file`), evitando el arranque en frío de Vitest (~30–45s por corrida).
+6. **Backend en iteración** (rápido, sin cobertura): `python -m pytest tests/<archivo> -q --no-cov
+   -p no:warnings` desde `backend/`; la cobertura se reserva para el CI (`python -m pytest`).
+7. El guard test `frontend/src/test/protocolGuard.test.ts` protege estas reglas de forma
    estructural: si se degrada el protocolo, la suite falla.
 
 ---
@@ -52,12 +57,13 @@ atómica.
 4. Evitar commits masivos de consolidación: son la excepción, no la regla. El
    flujo normal es commit pequeño y frecuente por iteración verde.
 5. El commit dispara el gate **ligero** pre-commit (lint-staged + tipos). El **push**
-   dispara el gate de entrega **pre-push** con `npm run test:full`. Si lint-staged
+   dispara el pre-push **ligero** (typecheck) y el **CI** valida la entrega completa
+   (`test:full` + validadores + backend). Si lint-staged
    falla por límite de longitud de línea en Windows (muchos archivos a la vez),
    es señal de que la iteración es demasiado grande: dividirla en commits menores.
 
 ---
 
 **Última actualización**: 2026-09-06
-**Versión del documento**: 1.2
+**Versión del documento**: 1.3
 **Estado**: Reglas operativas del repositorio OmniBotIA Studio

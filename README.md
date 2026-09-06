@@ -46,7 +46,7 @@ npm install
 npm run dev        # Arranca Vite en http://localhost:5173
 npm run test       # Iteración rápida: solo tests de lo cambiado (--changed)
 npm run test:file <ruta>   # Solo el test de la tarea en curso
-npm run test:full  # Suite completa (cierre de hito y gate de entrega pre-push)
+npm run test:full  # Suite completa (cierre de hito; el CI la corre en cada push)
 npm run build      # Compila en modo producción
 ```
 
