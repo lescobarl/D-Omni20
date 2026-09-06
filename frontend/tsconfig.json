@@ -5,6 +5,11 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    // `incremental` con `noEmit` acelera el typecheck repetido (pre-commit/push):
+    // solo re-tipifica lo cambiado entre corridas. El buildinfo va a la caché de
+    // node_modules (ignorada por git) para no ensuciar el árbol.
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.app.tsbuildinfo",
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
