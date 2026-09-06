@@ -31,14 +31,24 @@ jobs:
       - name: Suite completa de tests
         run: npm run test:full
 
-  # El job de backend corre en Windows para espejar el entorno local donde la
-  # suite está verificada (la suite pasa 1255 tests con la config actual).
+  # El backend necesita un `DATABASE_URL` en el entorno: `app.main` ejecuta
+  # `create_app()` al importarse (uvicorn) y valida la config en ese momento.
+  # En local lo aporta `.env`; aquí se define un SQLite de import (los tests usan
+  # su propio SQLite temporal vía `test_settings`, así que este valor es solo
+  # para la validación de arranque).
   backend:
     name: Backend · pytest + cobertura
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///:memory:
     defaults:
       run:
         working-directory: backend
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
