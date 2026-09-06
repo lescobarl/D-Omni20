@@ -31,7 +31,7 @@ from app.schemas.tenant_config import (
 router = APIRouter(
     prefix="/channels",
     tags=["channels"],
-    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 
 

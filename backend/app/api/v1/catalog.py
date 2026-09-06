@@ -25,7 +25,7 @@ from app.schemas.tenant_config import CatalogItemCreate, CatalogItemRead, Catalo
 router = APIRouter(
     prefix="/catalog",
     tags=["catalog"],
-    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 
 

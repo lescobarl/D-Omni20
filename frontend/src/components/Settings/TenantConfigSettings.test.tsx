@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { TenantConfigSettings } from '@/components/Settings/TenantConfigSettings';
+import { useAuthStore } from '@/store/authStore';
 import { setTenantConfigService, useTenantConfigStore } from '@/store/tenantConfigStore';
 import { setBotService, useBotStore } from '@/store/botStore';
 import { createTestConfig } from '@/test/config';
@@ -15,6 +16,8 @@ describe('TenantConfigSettings', () => {
     useTenantConfigStore.getState().reset();
     useBotStore.getState().reset();
     setBotService(makeBotService());
+    // Las pruebas cubren la vista del ADMIN del tenant (Catálogo/Canales/Bots).
+    useAuthStore.setState({ isAuthenticated: true, isSuperAdmin: false, activeRole: 'admin' });
     document.documentElement.removeAttribute('style');
   });
 
@@ -23,6 +26,7 @@ describe('TenantConfigSettings', () => {
     useBotStore.getState().reset();
     setTenantConfigService(null);
     setBotService(null);
+    useAuthStore.setState({ isAuthenticated: false, isSuperAdmin: false, activeRole: null });
     document.documentElement.removeAttribute('style');
   });
 
@@ -132,5 +136,22 @@ describe('TenantConfigSettings', () => {
     expect(document.getElementById('catalog-heading')).not.toBeNull();
     expect(document.getElementById('channels-heading')).not.toBeNull();
     expect(document.getElementById('bots-heading')).not.toBeNull();
+  });
+
+  it('el configurador solo ve Apariencia y Contenido (RBAC: Catálogo/Canales/Bots son del admin)', () => {
+    setTenantConfigService(makeService());
+    useAuthStore.setState({
+      isAuthenticated: true,
+      isSuperAdmin: false,
+      activeRole: 'configurador',
+    });
+
+    render(<TenantConfigSettings config={createTestConfig()} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Apariencia', 'Contenido']);
+    expect(screen.queryByRole('tab', { name: 'Catálogo' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Canales' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Bots' })).toBeNull();
   });
 });

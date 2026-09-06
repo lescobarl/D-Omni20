@@ -185,7 +185,7 @@ export default function App({ config }: IAppProps): ReactElement {
             label: 'Captación',
             subtitle: 'Captación publicitaria',
             announcement: 'Captación publicitaria abierta',
-            area: 'operations' as RbacArea,
+            area: 'ads' as RbacArea,
           },
         ]
       : []),
@@ -207,7 +207,7 @@ export default function App({ config }: IAppProps): ReactElement {
             label: 'Dominios',
             subtitle: 'Dominios personalizados',
             announcement: 'Dominios personalizados abierta',
-            area: 'tenantConfig' as RbacArea,
+            area: 'hosts' as RbacArea,
           },
         ]
       : []),

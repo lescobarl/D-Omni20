@@ -22,7 +22,7 @@ from app.services.interfaces import IPseoHostService
 router = APIRouter(
     prefix="/pseo/hosts",
     tags=["pseo-hosts"],
-    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 
 

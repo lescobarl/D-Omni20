@@ -20,7 +20,7 @@ from app.services.interfaces import IAdsService
 router = APIRouter(
     prefix="/ads",
     tags=["ads"],
-    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 
 

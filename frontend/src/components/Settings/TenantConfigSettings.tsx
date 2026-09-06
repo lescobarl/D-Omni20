@@ -10,6 +10,7 @@
  */
 import { useState, type ReactElement } from 'react';
 import type { IAppConfig } from '@/types/config';
+import { useAuthStore } from '@/store/authStore';
 import { AppearanceSection } from '@/components/Settings/AppearanceSection';
 import { ContentSection } from '@/components/Settings/ContentSection';
 import { CatalogSection } from '@/components/Settings/CatalogSection';
@@ -46,6 +47,18 @@ const TABS: ReadonlyArray<{ id: SettingsTab; label: string; panelId: string }> =
  */
 export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): ReactElement {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+  const isSuperAdmin = useAuthStore((state) => state.isSuperAdmin);
+  const activeRole = useAuthStore((state) => state.activeRole);
+
+  // Catálogo/Canales/Bots son configuración de negocio/infra del ADMIN (y super).
+  const canManageAdvanced = isSuperAdmin || activeRole === 'admin';
+  const visibleTabs = TABS.filter(
+    (tab) =>
+      tab.id === 'appearance' ||
+      tab.id === 'content' ||
+      (tab.id === 'catalog' || tab.id === 'channels' || tab.id === 'bots') === canManageAdvanced,
+  );
+  const showTab = (tab: SettingsTab): boolean => visibleTabs.some((item) => item.id === tab);
 
   const tabButtonClass = (selected: boolean): string =>
     `flex-1 border-b-2 px-3 py-2 text-sm font-medium transition ${
@@ -61,7 +74,7 @@ export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): Re
         aria-label="Configuración del bot"
         className="flex border-b border-slate-200 bg-white"
       >
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -94,30 +107,36 @@ export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): Re
         >
           <ContentSection />
         </div>
-        <div
-          role="tabpanel"
-          id="settings-panel-catalog"
-          aria-labelledby="settings-tab-catalog"
-          hidden={activeTab !== 'catalog'}
-        >
-          <CatalogSection />
-        </div>
-        <div
-          role="tabpanel"
-          id="settings-panel-channels"
-          aria-labelledby="settings-tab-channels"
-          hidden={activeTab !== 'channels'}
-        >
-          <ChannelsSection />
-        </div>
-        <div
-          role="tabpanel"
-          id="settings-panel-bots"
-          aria-labelledby="settings-tab-bots"
-          hidden={activeTab !== 'bots'}
-        >
-          <BotsSection />
-        </div>
+        {showTab('catalog') && (
+          <div
+            role="tabpanel"
+            id="settings-panel-catalog"
+            aria-labelledby="settings-tab-catalog"
+            hidden={activeTab !== 'catalog'}
+          >
+            <CatalogSection />
+          </div>
+        )}
+        {showTab('channels') && (
+          <div
+            role="tabpanel"
+            id="settings-panel-channels"
+            aria-labelledby="settings-tab-channels"
+            hidden={activeTab !== 'channels'}
+          >
+            <ChannelsSection />
+          </div>
+        )}
+        {showTab('bots') && (
+          <div
+            role="tabpanel"
+            id="settings-panel-bots"
+            aria-labelledby="settings-tab-bots"
+            hidden={activeTab !== 'bots'}
+          >
+            <BotsSection />
+          </div>
+        )}
       </div>
     </div>
   );

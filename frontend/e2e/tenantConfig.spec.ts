@@ -48,13 +48,15 @@ async function openSettingsTab(page: Page, tabName: string): Promise<void> {
 
 test.describe('Configuración del tenant (E2E)', () => {
   test.beforeEach(async ({ page }) => {
-    // Login real del configurador (RBAC): la app exige autenticación y el área de
-    // configuración solo es accesible con rol `configurador`/`admin`.
-    await loginAs(page, 'configurador');
+    // Login real (RBAC): el flujo crea ítems de catálogo y conecta canales, lo
+    // que requiere rol `admin` (la matriz asigna Catálogo/Canales/Bots al admin).
+    await loginAs(page, 'admin');
     await openSettings(page);
   });
 
-  test('cabecera del configurador: 4 pestañas y panel de apariencia por defecto', async ({ page }) => {
+  test('cabecera del configurador: 4 pestañas y panel de apariencia por defecto', async ({
+    page,
+  }) => {
     // Cabecera en modo configuración: el botón "Configuración" queda resaltado (aria-pressed).
     await expect(page.getByRole('heading', { level: 1, name: 'OmniBotIA Studio' })).toBeVisible();
     // El selector de tenant está visible y preselecciona el tenant activo (dev-tenant).
@@ -78,7 +80,9 @@ test.describe('Configuración del tenant (E2E)', () => {
       );
     }
     await expect(page.getByRole('tabpanel', { name: TABS.appearance })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'Apariencia / Branding' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Apariencia / Branding' }),
+    ).toBeVisible();
 
     await page.screenshot({
       path: 'test-results/screenshots/tenant-config-settings.png',

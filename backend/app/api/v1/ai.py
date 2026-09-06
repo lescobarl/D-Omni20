@@ -27,7 +27,7 @@ from app.services.interfaces import IAuditService, ISchemaGenerationService
 router = APIRouter(
     prefix="/ai",
     tags=["ai"],
-    dependencies=[Depends(require_role(Role.ADMIN, Role.CONFIGURADOR))],
+    dependencies=[Depends(require_role(Role.ADMIN))],
 )
 
 

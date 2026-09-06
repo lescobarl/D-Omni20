@@ -19,6 +19,8 @@ export type RbacArea =
   | 'tenantMembers' // miembros del tenant
   | 'tenantConfig' // configuración del tenant (apariencia, canales, bot…)
   | 'content' // contenido (landings, portal, catálogo, documentos…)
+  | 'ads' // captación publicitaria (creación/presupuestos: solo admin)
+  | 'hosts' // dominios personalizados (solo admin)
   | 'operations' // CRM / campañas / intervenciones / operaciones
   | 'analytics' // estadísticas / analítica / auditoría
   | 'profile'; // mi perfil / contraseña
@@ -68,6 +70,10 @@ export function canAccessArea(area: RbacArea, context: IRbacContext): boolean {
     case 'tenantConfig':
     case 'content':
       return canAccessConfigArea(role, isSuperAdmin);
+    case 'ads':
+    case 'hosts':
+      // Captación publicitaria y dominios: decisiones de negocio/infra del admin.
+      return isSuperAdmin || role === 'admin';
     case 'operations':
       // CRM/campañas/intervenciones: super-admin o admin/operador.
       return isSuperAdmin || (role !== null && OPERATIONS_ROLES.includes(role));
