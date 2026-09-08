@@ -6,11 +6,13 @@
  * - Tras recargar la página, el estado restaurado coincide con el guardado.
  */
 import { expect, test } from '@playwright/test';
+import { loginAs } from './helpers';
 
 test.describe('Persistencia del editor (E2E)', () => {
   test('persiste la landing entre recargas de página', async ({ page }) => {
-    // Estado limpio antes de iniciar el flujo.
-    await page.goto('/');
+    // Login real (RBAC) para que el spec sea autocontenido en cualquier entorno.
+    await loginAs(page, 'admin');
+    // Estado limpio del editor antes de iniciar el flujo (no toca el token).
     await page.evaluate(() => localStorage.removeItem('omnibotia-editor'));
     await page.reload();
 

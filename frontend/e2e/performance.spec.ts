@@ -9,6 +9,7 @@
  * es detectar regresiones graves de rendimiento, no micro-optimizaciones.
  */
 import { expect, test } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Presupuesto de carga inicial de la aplicación (ms). */
 const LOAD_BUDGET_MS = 5_000;
@@ -20,8 +21,9 @@ test.describe('Rendimiento (E2E smoke)', () => {
     // Arranque en frío (no presupuestado): en Vite la primera navegación dispara la
     // compilación on-demand del bundle y, en el run completo, compite con el resto de
     // workers paralelos. Medir ese coste de arranque daría falsos positivos en CI, así
-    // que se usa como warm-up y el presupuesto se aplica a la carga en estado estable.
-    await page.goto('/');
+    // que se usa como warm-up (login real incluido) y el presupuesto se aplica a la
+    // carga en estado estable.
+    await loginAs(page, 'admin');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     // Medición en estado estable: recarga con la app ya compilada y caché activa.

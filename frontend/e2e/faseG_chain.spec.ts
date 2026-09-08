@@ -1,9 +1,9 @@
 /**
  * FASE G - Item 15 - Cadena de construcción comercial (E2E UI sobre el tenant configurado).
  *
- * Complementa el script API determinista `backend/scripts/faseg_e2e_chain.py` validando
- * la MISMA cadena a través de la UI real (Playwright) sobre el tenant objetivo
- * (``E2E_TENANT_SLUG``) con una landing que ya tenga ``campaign_id``:
+ * Valida la cadena de construcción comercial a través de la UI real (Playwright)
+ * sobre el tenant objetivo (``E2E_TENANT_SLUG``) con una landing que ya tenga
+ * ``campaign_id``:
  *
  * Cadena validada (pasos):
  *   1. Seleccionar el tenant objetivo en el selector de tenant.
@@ -105,6 +105,10 @@ test.describe('FASE G - Cadena de construcción comercial (tenant objetivo)', ()
   });
 
   test('cadena completa: landing -> ads -> lead con contexto -> recompra', async ({ page }) => {
+    test.skip(
+      !LANDING_NAME || !LANDING_ID,
+      'Requiere E2E_LANDING_NAME y E2E_LANDING_ID (landing real con campaign_id) para validar la cadena.',
+    );
     // ---------------------------------------------------------------------
     // PASO 1 - Seleccionar el tenant objetivo.
     // ---------------------------------------------------------------------
