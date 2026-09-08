@@ -16,8 +16,8 @@ Uso (desde ``backend/``):
     OMNI_RELOAD=1 python run_dev.py   # recarga automática en desarrollo
 
 TLS local (opcional, recomendado para servir subdominios en desarrollo):
-    OMNI_SSL_CERTFILE=certs/escobar.clientes.omni2.app+2.pem ^
-    OMNI_SSL_KEYFILE=certs/escobar.clientes.omni2.app+2-key.pem ^
+    OMNI_SSL_CERTFILE=certs/localhost+2.pem ^
+    OMNI_SSL_KEYFILE=certs/localhost+2-key.pem ^
     python run_dev.py
     # Sirve HTTPS en el puerto configurado (OMNI_PORT, por defecto 8000).
     # Los certificados se generan con mkcert (CA local de confianza) para que el

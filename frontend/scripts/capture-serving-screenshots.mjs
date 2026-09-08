@@ -15,24 +15,27 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, '..', '..', 'docs', 'evidencia-serving');
 
+// Configuración por variables de entorno (sin valores quemados, regla CLAUDE 1).
+const TENANT_SLUG = process.env.E2E_TENANT_SLUG ?? 'dev-tenant';
+const CLIENT_SUBDOMAIN_BASE = process.env.E2E_CLIENT_SUBDOMAIN_BASE ?? 'clientes.omni2.app';
+const SERVING_PORT = process.env.E2E_SERVING_PORT ?? '8000';
+const LANDING_ID = process.env.E2E_LANDING_ID ?? '';
+const LANDING_SLUG = process.env.E2E_LANDING_SLUG ?? '';
+
+const DOMAIN = `https://${TENANT_SLUG}.${CLIENT_SUBDOMAIN_BASE}:${SERVING_PORT}`;
+
 const TARGETS = [
-  {
-    name: 'portal-escobar',
-    url: 'https://escobar.clientes.omni2.app:8000/portal',
-  },
-  {
-    name: 'landing-escobar',
-    url: 'https://escobar.clientes.omni2.app:8000/cdn/2dd39716-8fc3-4e85-869e-0b644b0e1938/v3',
-  },
-  {
-    name: 'landing-escobar-slug',
-    url: 'https://escobar.clientes.omni2.app:8000/l/casa-vista-al-lago-tequesquitengo',
-  },
-  {
-    name: 'raiz-escobar-redirect',
-    url: 'https://escobar.clientes.omni2.app:8000/',
-  },
+  { name: 'portal', url: `${DOMAIN}/portal` },
+  { name: 'raiz-redirect', url: `${DOMAIN}/` },
 ];
+// Los targets de landing requieren el id/slug de una landing publicada del
+// tenant; se incluyen solo cuando se aportan (evita URLs inválidas).
+if (LANDING_ID) {
+  TARGETS.push({ name: 'landing', url: `${DOMAIN}/cdn/${LANDING_ID}/v3` });
+}
+if (LANDING_SLUG) {
+  TARGETS.push({ name: 'landing-slug', url: `${DOMAIN}/l/${LANDING_SLUG}` });
+}
 
 mkdirSync(OUT_DIR, { recursive: true });
 

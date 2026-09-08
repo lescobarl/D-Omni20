@@ -1,15 +1,12 @@
 /**
- * FASE G - Item 15 - Cadena de construcción comercial (E2E UI sobre el tenant `escobar`).
+ * FASE G - Item 15 - Cadena de construcción comercial (E2E UI sobre el tenant configurado).
  *
  * Complementa el script API determinista `backend/scripts/faseg_e2e_chain.py` validando
- * la MISMA cadena a través de la UI real (Playwright) sobre el tenant `escobar`, que
- * contiene datos reales de la Inmobiliaria Escobar:
- *
- *   - Landing real: "Casa vista al lago Tequesquitengo"
- *     (id 2dd39716-8fc3-4e85-869e-0b644b0e1938, campaign_id 65233ed5-...).
+ * la MISMA cadena a través de la UI real (Playwright) sobre el tenant objetivo
+ * (``E2E_TENANT_SLUG``) con una landing que ya tenga ``campaign_id``:
  *
  * Cadena validada (pasos):
- *   1. Seleccionar el tenant `escobar` en el selector de tenant.
+ *   1. Seleccionar el tenant objetivo en el selector de tenant.
  *   2. En el editor, abrir la landing real, editarla (cambio benigno) y publicarla.
  *   3. En "Captación" (ads), crear una campaña publicitaria apuntando a la landing real.
  *   4. En el panel derecho del editor, abrir el workflow "Captura de Leads".
@@ -22,16 +19,21 @@
  * Restricciones de arquitectura tenidas en cuenta:
  *   - El tenant activo se guarda SOLO en memoria (tenantContext), NO en localStorage.
  *     Un recargo de página lo reinicia a `dev-tenant`. Por eso NO se recarga la página
- *     tras seleccionar `escobar`; en su lugar se alterna entre vistas para forzar el
- *     remontaje de los componentes (cada vista carga sus datos en useEffect con []).
+ *     tras seleccionar el tenant objetivo; en su lugar se alterna entre vistas para
+ *     forzar el remontaje de los componentes (cada vista carga sus datos en useEffect).
  *   - El editor (LandingEditor) es la vista por defecto y se monta al cargar con
- *     `dev-tenant`. Para cargar las landings de `escobar` hay que remontarlo: se navega
- *     a "Captación" y se vuelve al editor.
+ *     `dev-tenant`. Para cargar las landings del tenant objetivo hay que remontarlo:
+ *     se navega a "Captación" y se vuelve al editor.
  *   - La captura de leads lee `useCurrentLanding()` del store del editor, por lo que la
  *     landing real debe estar cargada en el editor para que se adjunte el contexto.
  *
+ * Variables de entorno (regla CLAUDE 1: sin valores quemados):
+ *   - E2E_TENANT_SLUG   (default: dev-tenant)
+ *   - E2E_LANDING_NAME  (nombre de la landing real con campaign_id; obligatorio)
+ *   - E2E_LANDING_ID    (id de la landing real; obligatorio)
+ *
  * Dependencias del entorno:
- *   - Backend en `VITE_API_BASE_URL` (http://localhost:8000) con el tenant `escobar`.
+ *   - Backend en `VITE_API_BASE_URL` (http://localhost:8000) con el tenant objetivo.
  *   - Feature-gates `ads` y `operations` activados en `.env.development`.
  *   - La landing real NO se borra ni se renombra de forma destructiva: solo se edita su
  *     título de forma benigna y se vuelve a publicar (round-trip real).
@@ -41,9 +43,12 @@ import { loginAs } from './helpers';
 
 /** Constantes de contrato de la UI (nombres accesibles estables). */
 const TENANT_SELECT = 'Tenant activo';
-const ESCOBAR_SLUG = 'escobar';
-const LANDING_NAME = 'Casa vista al lago Tequesquitengo';
-const LANDING_ID = '2dd39716-8fc3-4e85-869e-0b644b0e1938';
+// Identidad del tenant y de la landing objetivo por variables de entorno
+// (regla CLAUDE 1: sin valores quemados). El tenant por defecto es el seed de
+// desarrollo; la landing debe aportarse vía E2E_LANDING_NAME/E2E_LANDING_ID.
+const TENANT_SLUG = process.env.E2E_TENANT_SLUG ?? 'dev-tenant';
+const LANDING_NAME = process.env.E2E_LANDING_NAME ?? '';
+const LANDING_ID = process.env.E2E_LANDING_ID ?? '';
 
 const RIGHT_PANEL_TABLIST = 'Panel derecho del editor';
 const WORKFLOW_TABLIST = 'Tipos de workflow';
@@ -91,38 +96,36 @@ async function openOperationsTab(page: Page, tabName: string): Promise<void> {
   await expect(page.getByRole('tabpanel', { name: tabName })).toBeVisible();
 }
 
-test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () => {
+test.describe('FASE G - Cadena de construcción comercial (tenant objetivo)', () => {
   test.beforeEach(async ({ page }) => {
-    // Login real (RBAC): la cadena opera el tenant `escobar`, visible para el
+    // Login real (RBAC): la cadena opera el tenant objetivo, visible para el
     // super-admin (el admin de referencia solo tiene membresía en dev-tenant).
     // Autocontenido sin `storageState` (funciona en local y en CI).
     await loginAs(page, 'superadmin');
   });
 
-  test('cadena completa: landing -> ads -> lead con contexto -> recompra (escobar)', async ({
-    page,
-  }) => {
+  test('cadena completa: landing -> ads -> lead con contexto -> recompra', async ({ page }) => {
     // ---------------------------------------------------------------------
-    // PASO 1 - Seleccionar el tenant `escobar`.
+    // PASO 1 - Seleccionar el tenant objetivo.
     // ---------------------------------------------------------------------
-    await test.step('PASO 1: seleccionar el tenant escobar', async () => {
+    await test.step('PASO 1: seleccionar el tenant objetivo', async () => {
       const tenantSelect = page.getByLabel(TENANT_SELECT);
       await expect(tenantSelect).toBeVisible();
-      await tenantSelect.selectOption(ESCOBAR_SLUG);
-      await expect(tenantSelect).toHaveValue(ESCOBAR_SLUG);
+      await tenantSelect.selectOption(TENANT_SLUG);
+      await expect(tenantSelect).toHaveValue(TENANT_SLUG);
       await page.screenshot({
-        path: `${EVIDENCE_DIR}/faseg-1-tenant-escobar.png`,
+        path: `${EVIDENCE_DIR}/faseg-1-tenant.png`,
         fullPage: true,
       });
     });
 
     // ---------------------------------------------------------------------
-    // PASO 2 - Remontar el editor para cargar las landings de escobar y
+    // PASO 2 - Remontar el editor para cargar las landings del tenant y
     //          editar + publicar la landing real.
     // ---------------------------------------------------------------------
-    await test.step('PASO 2: editar y publicar la landing real en escobar', async () => {
+    await test.step('PASO 2: editar y publicar la landing real', async () => {
       // El editor se montó al cargar con dev-tenant. Alternamos a "Captación" y
-      // volvemos para forzar el remontaje con el tenant escobar (sin recargar).
+      // volvemos para forzar el remontaje con el tenant objetivo (sin recargar).
       await page.getByRole('button', { name: 'Captación' }).click();
       await expect(
         page.getByRole('heading', { level: 2, name: 'Captación publicitaria' }),
@@ -151,9 +154,8 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
 
       // Edición benigna del título (round-trip real de guardado).
       // Nota: el input muestra `config.title` de la landing, que en los datos reales
-      // de escobar difiere del `name` de la fila ("Casa con vista al lago ..." vs
-      // "Casa vista al lago ..."). No asumimos el valor inicial: solo comprobamos que
-      // el input esté habilitado (la landing ya se cargó, verificado por el status).
+      // puede diferir del `name` de la fila. No asumimos el valor inicial: solo
+      // comprobamos que el input esté habilitado (la landing ya se cargó).
       const titleInput = page.locator('#landing-title');
       await expect(titleInput).toBeEnabled();
       await titleInput.fill(`${LANDING_NAME} (FaseG UI ${stamp})`);
@@ -272,7 +274,7 @@ test.describe('FASE G - Cadena de construcción comercial (tenant escobar)', () 
       const utmResponse = await page.request.post('http://127.0.0.1:8000/api/v1/workflows/lead', {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-Tenant-Id': 'escobar',
+          'X-Tenant-Id': TENANT_SLUG,
           'Content-Type': 'application/json',
         },
         data: {

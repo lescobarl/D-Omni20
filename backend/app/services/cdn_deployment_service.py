@@ -220,7 +220,7 @@ class CdnDeploymentService(ICdnDeploymentService):
         Además se reescribe el ``src`` del ``<script src=".../static/embed.js">``
         al mismo ``origin`` del request. El ``src`` se hornea en el HTML en el
         despliegue con el esquema y puerto del CDN configurado (p. ej.
-        ``http://escobar.clientes.omni2.app/static/embed.js``), que al servirse
+        ``http://acme.clientes.omni2.app/static/embed.js``), que al servirse
         por HTTPS sin puerto provoca **mixed-content** (el navegador bloquea el
         script). Al reescribirlo al origen real se elimina el bloqueo y el SDK
         se carga siempre desde el mismo origen que sirvió la página.

@@ -8,7 +8,7 @@ Contrato:
 - URL amigable por slug: ``GET /l/{slug}`` resuelve el tenant por ``Host`` y
   sirve la landing publicada con ese slug (última versión desplegada al CDN).
   Cada landing tiene su propia URL amigable (p. ej.
-  ``http://escobar.clientes.omni2.app:8000/l/casa-vista-lago-tequesquitengo``).
+  ``http://acme.clientes.omni2.app:8000/l/casa-vista-lago``).
 - La raíz ``GET /`` NO sirve una landing directamente: redirige al Portal del
   Cliente (``/portal``). La landing inicial tiene su propia URL amigable.
 - El tenant se resuelve SIEMPRE por la cabecera ``Host`` contra ``pseo_hosts``

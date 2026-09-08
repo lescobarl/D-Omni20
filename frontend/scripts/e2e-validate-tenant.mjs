@@ -1,50 +1,60 @@
 /**
- * VALIDACIÓN E2E COMPLETA del flujo del tenant `escobar` en navegador real
+ * VALIDACIÓN E2E COMPLETA del flujo del tenant configurado en navegador real
  * (Playwright/Chromium). Recorre TODO el flujo de construcción comercial y de
  * publicación, tomando una captura de pantalla en cada paso:
  *
  *   1. El editor (SPA en Vite) carga y SE CONECTA al backend (sin el error
  *      "No se pudo conectar con el servidor") y el selector de tenant carga.
- *   2. Se selecciona el tenant `escobar`.
- *   3. Se remonta el editor (Captación -> Sitio) para cargar las landings de
- *      escobar y se CREA una landing nueva (Nueva -> nombre -> Guardar).
+ *   2. Se selecciona el tenant objetivo (``E2E_TENANT_SLUG``).
+ *   3. Se remonta el editor (Captación -> Sitio) para cargar las landings del
+ *      tenant y se CREA una landing nueva (Nueva -> nombre -> Guardar).
  *   4. Se PUBLICA la landing nueva.
- *   5. Se abre la landing publicada en el dominio real
- *      https://escobar.clientes.omni2.app:8000/l/<slug> y se verifica que
- *      renderiza (no solo HTTP 200).
- *   6. Se abre el Portal del Cliente https://escobar.clientes.omni2.app:8000/portal
+ *   5. Se abre la landing publicada en el dominio ``{slug}.{subdomain}:{port}``
+ *      y se verifica que renderiza (no solo HTTP 200).
+ *   6. Se abre el Portal del Cliente ``{slug}.{subdomain}:{port}/portal``
  *      y se verifica que renderiza.
  *   7. En el editor se captura un LEAD (workflow "Captura de Leads") con la
  *      landing nueva cargada (contexto {landing_id, campaign_id}).
  *   8. Limpieza: se elimina la landing nueva creada por este run.
  *
- * Uso: node scripts/e2e-validate-escobar.mjs
+ * Uso: node scripts/e2e-validate-tenant.mjs
+ *
+ * Variables de entorno (todas opcionales, con defaults de desarrollo):
+ *   - E2E_TENANT_SLUG            (default: dev-tenant)
+ *   - E2E_CLIENT_SUBDOMAIN_BASE   (default: clientes.omni2.app)
+ *   - E2E_SERVING_PORT            (default: 8000)
+ *   - E2E_EDITOR_URL              (default: http://127.0.0.1:5174)
  *
  * Dependencias del entorno:
  *   - Backend HTTPS en https://127.0.0.1:8000 (VITE_API_BASE_URL).
  *   - SPA del editor en http://127.0.0.1:5174.
- *   - Host `escobar.clientes.omni2.app` -> 127.0.0.1 en el archivo hosts.
+ *   - Host ``{slug}.{subdomain}`` -> 127.0.0.1 en el archivo hosts.
  *   - Feature-gates `ads` y `operations` activados en `.env.development`.
  */
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const EDITOR_URL = 'http://127.0.0.1:5174';
-const DOMAIN_BASE = 'https://escobar.clientes.omni2.app:8000';
-const OUT_DIR = path.resolve('logs/visual-check/e2e-escobar');
+// Configuración por variables de entorno (sin valores quemados, regla CLAUDE 1):
+// el tenant a validar, el dominio base de subdominios y el puerto de serving.
+const TENANT_SLUG = process.env.E2E_TENANT_SLUG ?? 'dev-tenant';
+const CLIENT_SUBDOMAIN_BASE = process.env.E2E_CLIENT_SUBDOMAIN_BASE ?? 'clientes.omni2.app';
+const SERVING_PORT = process.env.E2E_SERVING_PORT ?? '8000';
+
+const EDITOR_URL = process.env.E2E_EDITOR_URL ?? 'http://127.0.0.1:5174';
+const DOMAIN_BASE = `https://${TENANT_SLUG}.${CLIENT_SUBDOMAIN_BASE}:${SERVING_PORT}`;
+const OUT_DIR = path.resolve('logs/visual-check/e2e-tenant');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // Contrato de la UI (nombres accesibles estables, igual que faseG_chain.spec.ts).
 const TENANT_SELECT = 'Tenant activo';
-const ESCOBAR_SLUG = 'escobar';
 const RIGHT_PANEL_TABLIST = 'Panel derecho del editor';
 const WORKFLOW_TABLIST = 'Tipos de workflow';
 
 /** Sufijo único por run para la landing creada (evita colisiones y permite limpiarla). */
 const stamp = Date.now();
-const landingName = `E2E Validación Escobar ${stamp}`;
-const leadEmail = `e2e-escobar-${stamp}@example.com`;
+const landingName = `E2E Validación ${stamp}`;
+const leadEmail = `e2e-tenant-${stamp}@example.com`;
 
 /** Normaliza un nombre a slug URL amigable (mismo criterio que el backend). */
 function slugify(value) {
@@ -136,22 +146,22 @@ try {
   await shot('1-editor-conectado');
 
   // ---------------------------------------------------------------------------
-  // PASO 2 - Seleccionar el tenant escobar.
+  // PASO 2 - Seleccionar el tenant objetivo.
   // ---------------------------------------------------------------------------
-  await tenantSelect.selectOption(ESCOBAR_SLUG);
+  await tenantSelect.selectOption(TENANT_SLUG);
   const tenantValue = await tenantSelect.inputValue().catch(() => '');
   record(
-    'PASO 2: seleccionar tenant escobar',
-    tenantValue === ESCOBAR_SLUG,
+    'PASO 2: seleccionar tenant objetivo',
+    tenantValue === TENANT_SLUG,
     `value=${tenantValue}`,
   );
-  await shot('2-tenant-escobar');
+  await shot('2-tenant-seleccionado');
 
   // ---------------------------------------------------------------------------
-  // PASO 3 - Remontar el editor y CREAR una landing nueva en escobar.
+  // PASO 3 - Remontar el editor y CREAR una landing nueva en el tenant.
   // ---------------------------------------------------------------------------
   // El editor se montó con dev-tenant. Alternamos a "Captación" y volvemos para
-  // forzar el remontaje con el tenant escobar (sin recargar la página).
+  // forzar el remontaje con el tenant objetivo (sin recargar la página).
   await page.getByRole('button', { name: 'Captación' }).click();
   await page
     .getByRole('heading', { level: 2, name: 'Captación publicitaria' })
@@ -256,7 +266,7 @@ try {
   // para que la captura de leads adjunte el contexto {landing_id, campaign_id}.
   await page.goto(EDITOR_URL, { waitUntil: 'networkidle', timeout: 40000 });
   await page.waitForTimeout(3000);
-  await page.getByLabel(TENANT_SELECT).selectOption(ESCOBAR_SLUG);
+  await page.getByLabel(TENANT_SELECT).selectOption(TENANT_SLUG);
   await page.getByRole('button', { name: 'Captación' }).click();
   await page
     .getByRole('heading', { level: 2, name: 'Captación publicitaria' })
@@ -313,7 +323,7 @@ try {
   const leadPanel = page.getByRole('tabpanel', { name: 'Captura de Leads' });
   await leadPanel.waitFor({ state: 'visible', timeout: 10000 });
 
-  await leadPanel.getByLabel('Nombre').fill('E2E Escobar Prospecto');
+  await leadPanel.getByLabel('Nombre').fill('E2E Prospecto');
   await leadPanel.getByLabel('Correo').fill(leadEmail);
   await leadPanel.getByLabel('Teléfono (opcional)').fill('+52 55 1234 5678');
   await leadPanel.getByLabel('Origen').selectOption('facebook');
@@ -332,7 +342,7 @@ try {
   // ---------------------------------------------------------------------------
   // La UI del configurador no expone un botón "Eliminar" para landings en todos
   // los modos; la eliminación se hace vía API con el id de la landing. Obtenemos
-  // el id consultando la API (listado del tenant escobar) filtrando por el nombre
+  // el id consultando la API (listado del tenant objetivo) filtrando por el nombre
   // único de este run. La petición se ejecuta DENTRO del contexto del navegador
   // (page.evaluate) para que herede `ignoreHTTPSErrors` y pueda hablar HTTPS con
   // el backend (el fetch de Node rechazaría el certificado mkcert autofirmado).
@@ -362,7 +372,7 @@ try {
           detail: `id=${created.id} status=${delResp.status}`,
         };
       },
-      { apiBase: 'https://127.0.0.1:8000', tenantSlug: ESCOBAR_SLUG, name: landingName },
+      { apiBase: 'https://127.0.0.1:8000', tenantSlug: TENANT_SLUG, name: landingName },
     );
     cleanupOk = cleanup.ok;
     cleanupDetail = cleanup.detail;
@@ -376,7 +386,7 @@ try {
 }
 
 const report = {
-  target: 'E2E completo flujo tenant escobar',
+  target: 'E2E completo flujo de tenant',
   editorUrl: EDITOR_URL,
   domainBase: DOMAIN_BASE,
   landingName,

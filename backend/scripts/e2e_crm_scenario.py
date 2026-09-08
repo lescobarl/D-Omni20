@@ -56,7 +56,7 @@ UTM_LEAD_METADATA: dict[str, Any] = {
     "needs_human": True,
     "utm_source": "meta",
     "utm_medium": "cpc",
-    "utm_campaign": "escobar-crm-e2e",
+    "utm_campaign": "crm-e2e",
     "utm_content": "lead-crm-e2e",
     "utm_term": "crm-e2e",
 }

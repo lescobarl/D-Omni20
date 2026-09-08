@@ -1,23 +1,32 @@
 /**
- * Verificación VISUAL del Portal y la Landing de Escobar con un navegador real
- * (Playwright/Chromium). Captura errores de consola, errores de página, fallos
- * de red y toma capturas de pantalla para validar que el widget portal.js
- * realmente renderiza contenido (no solo HTTP 200).
+ * Verificación VISUAL del Portal y la Landing del tenant configurado con un
+ * navegador real (Playwright/Chromium). Captura errores de consola, errores de
+ * página, fallos de red y toma capturas de pantalla para validar que el widget
+ * portal.js realmente renderiza contenido (no solo HTTP 200).
  *
  * Uso: node scripts/visual-check-portal.mjs
+ *
+ * Variables de entorno (opcionales): E2E_TENANT_SLUG, E2E_CLIENT_SUBDOMAIN_BASE,
+ * E2E_SERVING_PORT y E2E_LANDING_SLUG.
  */
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const BASE = 'https://escobar.clientes.omni2.app:8000';
+// Configuración por variables de entorno (sin valores quemados, regla CLAUDE 1).
+const TENANT_SLUG = process.env.E2E_TENANT_SLUG ?? 'dev-tenant';
+const CLIENT_SUBDOMAIN_BASE = process.env.E2E_CLIENT_SUBDOMAIN_BASE ?? 'clientes.omni2.app';
+const SERVING_PORT = process.env.E2E_SERVING_PORT ?? '8000';
+const LANDING_SLUG = process.env.E2E_LANDING_SLUG ?? '';
+
+const BASE = `https://${TENANT_SLUG}.${CLIENT_SUBDOMAIN_BASE}:${SERVING_PORT}`;
 const OUT_DIR = path.resolve('logs/visual-check');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-const targets = [
-  { name: 'portal', url: `${BASE}/portal` },
-  { name: 'landing', url: `${BASE}/l/casa-vista-al-lago-tequesquitengo` },
-];
+const targets = [{ name: 'portal', url: `${BASE}/portal` }];
+if (LANDING_SLUG) {
+  targets.push({ name: 'landing', url: `${BASE}/l/${LANDING_SLUG}` });
+}
 
 const browser = await chromium.launch({
   // El certificado mkcert NO está en el store de Chromium de Playwright, así que

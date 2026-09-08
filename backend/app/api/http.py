@@ -18,7 +18,7 @@ def request_origin(request: Request) -> str:
     Se prefieren las cabeceras ``X-Forwarded-Proto``/``X-Forwarded-Host`` que
     establecen los proxies/túneles (p. ej. ngrok) con la URL pública real.
     ``request.url.netloc`` refleja la cabecera ``Host``, que en un túnel se
-    sobrescribe para resolver el tenant (p. ej. ``escobar.clientes.omni2.app``)
+    sobrescribe para resolver el tenant (p. ej. ``acme.clientes.omni2.app``)
     y NO es el origen con el que el navegador accedió. Si no hay cabeceras
     reenviadas (acceso directo a localhost), se usa ``request.url``.
     """

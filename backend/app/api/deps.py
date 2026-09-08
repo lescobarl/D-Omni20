@@ -788,7 +788,7 @@ def get_pseo_tenant_by_host(
         )
 
     # Normaliza el Host: la cabecera puede incluir el puerto (p. ej.
-    # ``escobar.clientes.omni2.app:8000`` en desarrollo local, donde el backend
+    # ``acme.clientes.omni2.app:8000`` en desarrollo local, donde el backend
     # escucha en un puerto no estándar). El mapeo ``pseo_hosts`` se registra sin
     # puerto para los subdominios de clientes, pero el host de desarrollo se
     # registra CON puerto (``localhost:8000``). Para resolver ambos casos se
