@@ -23,22 +23,32 @@
  *   - Frontend dev server en el puerto 5174 (config e2e-local).
  */
 import { expect, test } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Nombres accesibles estables de la UI (contratos). */
 const TENANT_SELECT = 'Tenant activo';
 const DEV_TENANT = 'dev-tenant';
 const SITE_PAGE_SELECT = 'site-page-select';
 const CONNECT_ERROR = 'No se pudo conectar con el servidor';
+// Tenant secundario y su landing para la regresión de remontaje, por variables
+// de entorno (regla CLAUDE 1). Si no se configuran, el test se omite.
+const SECONDARY_TENANT = process.env.E2E_TENANT_SLUG ?? '';
+const SECONDARY_LANDING = process.env.E2E_LANDING_NAME ?? '';
 
 test.describe('Conectividad del Editor del sitio (SiteEditor)', () => {
-  test('al cambiar al tenant escobar el editor recarga sus landings sin navegar (regresión remontaje)', async ({
+  test('al cambiar de tenant el editor recarga sus landings sin navegar (regresión remontaje)', async ({
     page,
   }) => {
+    test.skip(
+      !SECONDARY_TENANT || !SECONDARY_LANDING,
+      'Requiere E2E_TENANT_SLUG y E2E_LANDING_NAME para validar el remontaje con un segundo tenant.',
+    );
     // Estado limpio: evita que la persistencia de Zustand contamine el test.
     await page.addInitScript(() => localStorage.clear());
 
-    // Navegamos por `127.0.0.1` (origen real del usuario) para reproducir el escenario.
-    await page.goto('http://127.0.0.1:5174/', { waitUntil: 'domcontentloaded' });
+    // Login real (RBAC) y navegación por `127.0.0.1` (origen real del usuario)
+    // para reproducir el escenario.
+    await loginAs(page, 'admin', 'http://127.0.0.1:5174/');
 
     // Cabecera con la configuración real del entorno de desarrollo.
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('OmniBotIA Studio');
@@ -48,29 +58,27 @@ test.describe('Conectividad del Editor del sitio (SiteEditor)', () => {
     await expect(tenantSelect).toBeVisible({ timeout: 15000 });
     await expect(tenantSelect).toHaveValue(DEV_TENANT);
 
-    // PASO 2 - Cambiar al tenant `escobar` (Inmobiliaria Escobar).
-    await tenantSelect.selectOption('escobar');
-    await expect(tenantSelect).toHaveValue('escobar');
+    // PASO 2 - Cambiar al tenant secundario configurado.
+    await tenantSelect.selectOption(SECONDARY_TENANT);
+    await expect(tenantSelect).toHaveValue(SECONDARY_TENANT);
 
-    // PASO 3 - El selector unificado del sitio se habilita y recarga las landings de
-    // escobar SIN navegar a otra vista (regresión del bug: antes había que ir a
-    // "Captación" y volver para forzar el remontaje). La landing real de escobar
-    // "Casa vista al lago Tequesquitengo" debe aparecer de inmediato.
+    // PASO 3 - El selector unificado del sitio se habilita y recarga las landings del
+    // tenant secundario SIN navegar a otra vista (regresión del bug: antes había que
+    // ir a "Captación" y volver para forzar el remontaje). La landing configurada
+    // debe aparecer de inmediato.
     const siteSelect = page.locator(`#${SITE_PAGE_SELECT}`);
     await expect(siteSelect).toBeVisible();
     await expect(siteSelect).toBeEnabled({ timeout: 15000 });
-    await expect(
-      siteSelect.locator('option', { hasText: 'Casa vista al lago Tequesquitengo' }),
-    ).toHaveCount(1);
+    await expect(siteSelect.locator('option', { hasText: SECONDARY_LANDING })).toHaveCount(1);
 
     // PASO 4 - NO debe aparecer el alerta de error de conexión.
     const connectAlert = page.getByRole('alert').filter({ hasText: CONNECT_ERROR });
     await expect(connectAlert).toHaveCount(0);
 
-    // Evidencia visual: el editor del sitio cargó las landings de escobar al cambiar
-    // de tenant, sin necesidad de navegar a "Captación" y volver.
+    // Evidencia visual: el editor del sitio cargó las landings del tenant secundario
+    // al cambiar de tenant, sin necesidad de navegar a "Captación" y volver.
     await page.screenshot({
-      path: 'test-results/screenshots/site-editor-escobar-remount.png',
+      path: 'test-results/screenshots/site-editor-remount.png',
       fullPage: true,
     });
   });
@@ -100,16 +108,18 @@ test.describe('Conectividad del Editor del sitio (SiteEditor)', () => {
     // Registro de peticiones fallidas a nivel de red.
     const requestFailures: string[] = [];
     page.on('requestfailed', (request) => {
-      requestFailures.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText}`);
+      requestFailures.push(
+        `${request.method()} ${request.url()} :: ${request.failure()?.errorText}`,
+      );
     });
 
     try {
-      // Navegamos por `127.0.0.1` (NO `localhost`) para reproducir EXACTAMENTE el
-      // origen que usa el navegador real del usuario. El backend debe permitir ese
-      // origen en CORS; si no, el navegador bloquea las respuestas de la API con
-      // error CORS y la UI muestra "No se pudo conectar con el servidor".
-      // `domcontentloaded` evita flakes de `load` (Monaco y fuentes retrasan `load`).
-      await page.goto('http://127.0.0.1:5174/', { waitUntil: 'domcontentloaded' });
+      // Login real (RBAC) y navegación por `127.0.0.1` (NO `localhost`) para
+      // reproducir EXACTAMENTE el origen que usa el navegador real del usuario.
+      // El backend debe permitir ese origen en CORS; si no, el navegador bloquea
+      // las respuestas de la API con error CORS y la UI muestra "No se pudo
+      // conectar con el servidor".
+      await loginAs(page, 'admin', 'http://127.0.0.1:5174/');
 
       // Cabecera con la configuración real del entorno de desarrollo.
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('OmniBotIA Studio');
@@ -133,9 +143,7 @@ test.describe('Conectividad del Editor del sitio (SiteEditor)', () => {
       await expect(connectAlert).toHaveCount(0);
 
       // PASO 5 - La landing «Inicio (Landing)» está disponible en el selector.
-      await expect(
-        siteSelect.locator('option', { hasText: 'Inicio (Landing)' }),
-      ).toHaveCount(1);
+      await expect(siteSelect.locator('option', { hasText: 'Inicio (Landing)' })).toHaveCount(1);
 
       // Evidencia visual del editor del sitio cargado correctamente.
       await page.screenshot({

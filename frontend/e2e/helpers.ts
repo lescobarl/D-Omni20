@@ -38,11 +38,14 @@ export type UserKey = keyof typeof USERS;
  *
  * @param page   Página de Playwright.
  * @param user   Clave del usuario de referencia (admin | configurador | operador).
+ * @param baseUrl Origen donde se carga la app (por defecto `/`, resuelto contra
+ *               el `baseURL` de la config de Playwright). Permite loguear contra
+ *               un origen explícito (p. ej. `http://127.0.0.1:5174/`).
  */
-export async function loginAs(page: Page, user: UserKey): Promise<void> {
+export async function loginAs(page: Page, user: UserKey, baseUrl = '/'): Promise<void> {
   const credentials = USERS[user];
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
 
   // La app sin sesión muestra la pantalla de login.
   await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();

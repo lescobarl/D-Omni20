@@ -11,6 +11,7 @@
  * (dnd-kit) se cubren a nivel de store (`canvasStore`) y con los tests unitarios del editor.
  */
 import { expect, test } from '@playwright/test';
+import { loginAs } from './helpers';
 
 /** Nombres accesibles estables de los landmarks (contratos de la UI). */
 const LIBRARY_LABEL = 'Librería de bloques';
@@ -24,6 +25,9 @@ test.describe('Editor de landings (E2E)', () => {
     // evento `load` (visible en Firefox); las aserciones posteriores ya esperan
     // elementos y absorben la carga asíncrona de Monaco (patrón de bots.spec).
     await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Login real (RBAC) para que el spec sea autocontenido en cualquier entorno
+    // (la config local no inyecta `storageState` como sí hace la config de CI).
+    await loginAs(page, 'admin');
   });
 
   test('flujo completo: crea una landing con bloques y la refleja en canvas y código', async ({
