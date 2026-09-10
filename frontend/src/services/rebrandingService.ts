@@ -36,6 +36,8 @@ export interface IRebrandingInput {
 export interface IRebrandingService {
   /** Extrae una propuesta de apariencia desde una URL de marca (sin persistir). */
   extractUrlStyles(url: string): Promise<IAppearanceProposal>;
+  /** Genera con IA una propuesta de apariencia desde una descripción (sin persistir). */
+  generateAppearanceFromPrompt(prompt: string): Promise<IAppearanceProposal>;
   /** Lista las configuraciones de rebranding guardadas del tenant activo. */
   listRebrandingConfigs(): Promise<IRebrandingConfigRead[]>;
   /** Guarda una configuración de rebranding (re-extrae los estilos y los aplica). */
@@ -79,6 +81,12 @@ export class BackendRebrandingService implements IRebrandingService {
   public async extractUrlStyles(url: string): Promise<IAppearanceProposal> {
     this.logger?.debug('rebranding.extractUrlStyles', { url });
     return this.apiClient.extractUrlStyles(url);
+  }
+
+  /** Genera con IA una propuesta de apariencia desde una descripción (sin persistir). */
+  public async generateAppearanceFromPrompt(prompt: string): Promise<IAppearanceProposal> {
+    this.logger?.debug('rebranding.generateAppearance', { promptLength: prompt.length });
+    return this.apiClient.generateAppearance(prompt);
   }
 
   /** Lista las configuraciones de rebranding guardadas del tenant activo. */

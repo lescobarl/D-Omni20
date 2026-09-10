@@ -315,6 +315,16 @@ class IAiService(ABC):
         brand_voice: dict[str, Any] | None = None,
     ) -> AiGenerationResult: ...
 
+    @abstractmethod
+    def generate_appearance(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        prompt: str,
+    ) -> AiGenerationResult:
+        """Genera con IA una propuesta de apariencia (paleta/tipografía) desde una descripción."""
+        ...
+
 
 @dataclass(frozen=True)
 class SchemaGenerationResult:

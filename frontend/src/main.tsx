@@ -18,6 +18,7 @@ import { createCompilerService } from '@/services/compilerService';
 import { createMarketplaceService } from '@/services/marketplaceService';
 import { createSchemaService } from '@/services/schemaService';
 import { createTenantConfigService } from '@/services/tenantConfigService';
+import { createRebrandingService } from '@/services/rebrandingService';
 import { createBotService } from '@/services/botService';
 import { createWorkflowService } from '@/services/workflowService';
 import { createOperationsService } from '@/services/operationsService';
@@ -39,7 +40,7 @@ import { setCdnService } from '@/store/cdnStore';
 import { setCompilerService } from '@/store/compilerStore';
 import { setMarketplaceService } from '@/store/marketplaceStore';
 import { setSchemaService } from '@/store/schemaStore';
-import { setTenantConfigService } from '@/store/tenantConfigStore';
+import { setTenantConfigService, setRebrandingService } from '@/store/tenantConfigStore';
 import { setBotService } from '@/store/botStore';
 import { setWorkflowService } from '@/store/workflowStore';
 import { setOperationsService } from '@/store/operationsStore';
@@ -94,6 +95,10 @@ setCdnService(createCdnService(apiClient, logger));
 // DI y feature flags; plan §11.2 apariencia del tenant).
 if (config.features.appearance) {
   setTenantConfigService(createTenantConfigService(apiClient, logger));
+  // Rebranding y asistente de marca comparten el mismo servicio de apariencia:
+  // se registra junto al configurador para que la UI pueda consultar el servicio
+  // disponible (la pestaña Configuración solo existe con esta bandera).
+  setRebrandingService(createRebrandingService(apiClient, logger));
 }
 
 // Composition root del servicio de bots (Fase 7): se inyecta la implementación real

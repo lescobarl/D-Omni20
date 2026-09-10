@@ -103,6 +103,20 @@ _PORTAL_SYSTEM_PROMPT = (
     "fuera de los permitidos."
 )
 
+_APPEARANCE_SYSTEM_PROMPT = (
+    "Eres un director de arte y branding experto. Devuelve SOLO un objeto JSON "
+    "válido (sin texto, sin markdown) con esta forma exacta: "
+    '{"primary_color": "#RRGGBB", "accent_color": "#RRGGBB", "surface_color": '
+    '"#RRGGBB", "text_color": "#RRGGBB", "brand_badge": "#RRGGBB", "font_family": '
+    '"Nombre" o null, "logo_url": null, "detected_fonts": []}. '
+    "Todos los colores deben ser hexadecimales de 6 dígitos (#RRGGBB). Diseña una "
+    "paleta coherente con el sector y el estilo descritos: primary para acciones y "
+    "CTA, accent para detalles y foco, surface para fondos de tarjetas, text legible "
+    "sobre surface y brand_badge para sellos. Garantiza contraste suficiente entre "
+    "texto y superficie y una estética sobria y actual. Si no puedes decidir un "
+    "campo, usa null. No inventes campos fuera de los permitidos ni añadas texto."
+)
+
 
 def _build_system_prompt(
     brand_voice: dict[str, Any] | None,
@@ -385,6 +399,88 @@ class DeepSeekGenerationService(IAiService):
             completion_tokens=completion_tokens,
         )
 
+    def generate_appearance(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        prompt: str,
+    ) -> AiGenerationResult:
+        """Genera una propuesta de apariencia (paleta/tipografía) desde una descripción.
+
+        Reutiliza el mismo motor DeepSeek y produce un dict con la forma de
+        ``AppearanceProposal`` (snake_case): los cinco colores de marca, logo,
+        tipografía y fuentes detectadas. Sin API key → ``ConfigValidationError``.
+        """
+        api_key = self._settings.deepseek_api_key
+        if not api_key or not api_key.strip():
+            raise ConfigValidationError(
+                "No se configuró DEEPSEEK_API_KEY",
+                operation="ai.generate_appearance",
+                context={"reason": "api_key_missing"},
+            )
+
+        cache_key = _cache_key(
+            tenant_id=tenant_id,
+            prompt=prompt,
+            workflow_type="appearance",
+        )
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            self._logger.info(
+                "ai.appearance_cache_hit",
+                message="Propuesta de apariencia servida desde caché",
+                tenant_id=str(tenant_id),
+            )
+            return AiGenerationResult(
+                config=cached["config"],
+                model=cached["model"],
+                cached=True,
+                prompt_tokens=cached.get("prompt_tokens", 0),
+                completion_tokens=cached.get("completion_tokens", 0),
+            )
+
+        content, prompt_tokens, completion_tokens = self._call_deepseek(
+            api_key=api_key,
+            prompt=prompt,
+            workflow_type=None,
+            system_prompt=_APPEARANCE_SYSTEM_PROMPT,
+        )
+        try:
+            parsed = _extract_json(content)
+        except ValueError as exc:
+            raise DependencyError(
+                "La IA devolvió contenido no parseable como JSON",
+                operation="ai.generate_appearance",
+                context={"stage": "json"},
+                cause=exc,
+            ) from exc
+        config = _validate_appearance_config(parsed)
+
+        model = self._settings.deepseek_model
+        self._cache.set(
+            cache_key,
+            {
+                "config": config,
+                "model": model,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            },
+            ttl_seconds=self._settings.deepseek_cache_ttl_seconds,
+        )
+        self._logger.info(
+            "ai.appearance_generated",
+            message="Propuesta de apariencia generada con IA",
+            tenant_id=str(tenant_id),
+            model=model,
+        )
+        return AiGenerationResult(
+            config=config,
+            model=model,
+            cached=False,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+
     def _call_deepseek(
         self,
         *,
@@ -608,4 +704,54 @@ def _validate_portal_config(raw: Any) -> dict[str, Any]:
         value = raw.get(key)
         if isinstance(value, dict):
             config[key] = value
+    return config
+
+
+def _validate_appearance_config(raw: Any) -> dict[str, Any]:
+    """Normaliza la salida del LLM a un dict de propuesta de apariencia seguro.
+
+    Solo se aceptan colores hexadecimales de 6 dígitos (el frontend y el motor de
+    tema no soportan alfa de 8); cualquier otro valor se descarta a ``None`` para
+    que "Aplicar" conserve el valor actual del borrador (merge en el cliente).
+    """
+    if not isinstance(raw, dict):
+        raise DependencyError(
+            "La IA no devolvió un objeto JSON",
+            operation="ai.generate_appearance",
+            context={"reason": "not_object"},
+        )
+
+    def normalize_hex(value: Any) -> str | None:
+        if not isinstance(value, str):
+            return None
+        match = re.fullmatch(r"#?([0-9a-fA-F]{6})", value.strip())
+        return f"#{match.group(1).upper()}" if match else None
+
+    def normalize_text(value: Any, *, max_length: int) -> str | None:
+        if not isinstance(value, str):
+            return None
+        cleaned = value.strip()
+        if cleaned == "" or len(cleaned) > max_length:
+            return None
+        return cleaned
+
+    raw_fonts = raw.get("detected_fonts")
+    detected_fonts: list[str] = []
+    if isinstance(raw_fonts, list):
+        detected_fonts = [
+            item.strip()
+            for item in raw_fonts
+            if isinstance(item, str) and item.strip()
+        ][:5]
+
+    config: dict[str, Any] = {
+        "primary_color": normalize_hex(raw.get("primary_color")),
+        "accent_color": normalize_hex(raw.get("accent_color")),
+        "surface_color": normalize_hex(raw.get("surface_color")),
+        "text_color": normalize_hex(raw.get("text_color")),
+        "brand_badge": normalize_hex(raw.get("brand_badge")),
+        "logo_url": normalize_text(raw.get("logo_url"), max_length=512),
+        "font_family": normalize_text(raw.get("font_family"), max_length=128),
+        "detected_fonts": detected_fonts,
+    }
     return config

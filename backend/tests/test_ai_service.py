@@ -435,3 +435,49 @@ def test_validate_config_normalizes_blocks_and_workflow() -> None:
     assert [b["type"] for b in config["blocks"]] == ["hero", "lead_form"]
     assert config["blocks"][1]["config"] == {}  # config no-dict → {}
     assert config["blocks"][0]["name"] == "Hero"
+
+
+# ── generate_appearance (asistente de marca) ──────────────────────────────────
+
+
+def test_generate_appearance_normalizes_hex_palette() -> None:
+    """Normaliza la paleta del LLM: solo hex de 6 dígitos, campos inventados descartados."""
+    content = (
+        '```json\n{"primary_color": "#1f2937", "accent_color": "rojo", '
+        '"surface_color": "#11223344", "text_color": "#0F172A", '
+        '"brand_badge": "#111827", "font_family": " Inter ", "logo_url": null, '
+        '"detected_fonts": [" Inter ", "Georgia"], "campo_inventado": true}\n```'
+    )
+    client = _FakeClient(
+        response=_FakeResponse(
+            {
+                "choices": [{"message": {"content": content}}],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 24},
+            }
+        )
+    )
+    service = _make_service(_make_settings(), client=client)
+
+    result = service.generate_appearance(tenant_id=uuid.uuid4(), prompt="paleta premium")
+
+    config = result.config
+    assert config["primary_color"] == "#1F2937"
+    assert config["text_color"] == "#0F172A"
+    assert config["brand_badge"] == "#111827"
+    assert config["accent_color"] is None  # hex inválido
+    assert config["surface_color"] is None  # hex con alfa (8 dígitos) no soportado
+    assert config["font_family"] == "Inter"
+    assert config["logo_url"] is None
+    assert config["detected_fonts"] == ["Inter", "Georgia"]
+    assert "campo_inventado" not in config
+    assert result.cached is False
+
+
+def test_generate_appearance_fails_closed_without_api_key() -> None:
+    """Sin API key, el asistente falla de forma controlada (config validation)."""
+    service = _make_service(_make_settings(deepseek_api_key="   "))
+
+    with pytest.raises(ConfigValidationError) as exc_info:
+        service.generate_appearance(tenant_id=uuid.uuid4(), prompt="paleta premium")
+
+    assert exc_info.value.context == {"reason": "api_key_missing"}

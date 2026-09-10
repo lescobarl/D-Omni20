@@ -68,6 +68,10 @@ export interface ITenantConfigState {
   rebrandingStatus: TenantConfigStatus;
   /** Mensaje del último error del flujo de rebranding (o `null`). */
   rebrandingError: string | null;
+  /** Estado del asistente de marca IA (generación por descripción). */
+  assistantStatus: TenantConfigStatus;
+  /** Mensaje del último error del asistente de marca IA (o `null`). */
+  assistantError: string | null;
 
   /** Contenido estructurado del bot cargado del tenant. */
   contentItems: IContentItemRead[];
@@ -110,6 +114,8 @@ export interface ITenantConfigState {
   saveAppearance(theme: IAppTheme): Promise<void>;
   /** Extrae una propuesta de apariencia desde una URL de marca (Fase 5). */
   extractUrl(url: string): Promise<IAppearanceProposal | null>;
+  /** Genera con IA una propuesta de apariencia desde una descripción (asistente). */
+  generateAppearance(prompt: string): Promise<IAppearanceProposal | null>;
   /** Guarda una configuración de rebranding (re-extrae y aplica los estilos). */
   saveRebranding(input: IRebrandingInput): Promise<IRebrandingConfigRead | null>;
   /** Carga las configuraciones de rebranding guardadas del tenant activo. */
@@ -258,6 +264,8 @@ export const useTenantConfigStore = create<ITenantConfigState>()((set, get) => (
   rebrandingConfigs: [],
   rebrandingStatus: 'idle',
   rebrandingError: null,
+  assistantStatus: 'idle',
+  assistantError: null,
 
   contentItems: [],
   contentStatus: 'idle',
@@ -351,6 +359,32 @@ export const useTenantConfigStore = create<ITenantConfigState>()((set, get) => (
           error,
           'No se pudieron extraer los estilos de la URL.',
         ),
+      });
+      return null;
+    }
+  },
+
+  generateAppearance: async (prompt: string): Promise<IAppearanceProposal | null> => {
+    if (rebrandingService === null) {
+      set({
+        assistantStatus: 'error',
+        assistantError: 'El servicio de asistente no está disponible.',
+      });
+      return null;
+    }
+    set({ assistantStatus: 'loading', assistantError: null });
+    try {
+      const proposal = await rebrandingService.generateAppearanceFromPrompt(prompt);
+      set({
+        appearanceProposal: proposal,
+        assistantStatus: 'success',
+        assistantError: null,
+      });
+      return proposal;
+    } catch (error) {
+      set({
+        assistantStatus: 'error',
+        assistantError: extractErrorMessage(error, 'No se pudo generar la propuesta de marca.'),
       });
       return null;
     }
@@ -998,6 +1032,8 @@ export const useTenantConfigStore = create<ITenantConfigState>()((set, get) => (
       rebrandingConfigs: [],
       rebrandingStatus: 'idle',
       rebrandingError: null,
+      assistantStatus: 'idle',
+      assistantError: null,
       contentItems: [],
       contentStatus: 'idle',
       contentError: null,

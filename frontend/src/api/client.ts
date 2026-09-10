@@ -329,6 +329,8 @@ export interface IApiClient {
   upsertTenantAppearance(payload: ITenantAppearanceUpsert): Promise<ITenantAppearanceRead>;
   /** Extrae una propuesta de apariencia desde una URL de marca (Fase 5). */
   extractUrlStyles(url: string): Promise<IAppearanceProposal>;
+  /** Genera una propuesta de apariencia con IA desde una descripción (sin persistir). */
+  generateAppearance(prompt: string): Promise<IAppearanceProposal>;
   /** Lista las configuraciones de rebranding guardadas del tenant activo. */
   listRebrandingConfigs(): Promise<IRebrandingConfigRead[]>;
   /** Guarda una configuración de rebranding por URL (re-extrae y aplica). */
@@ -1082,6 +1084,14 @@ export class HttpApiClient implements IApiClient {
     return this.request<IAppearanceProposal>('POST', `${API_PATHS.appearance}/extract-url`, {
       operation: 'tenant.appearance.extract_url',
       body: { url },
+    });
+  }
+
+  /** Genera una propuesta de apariencia con IA desde una descripción (sin persistir). */
+  public async generateAppearance(prompt: string): Promise<IAppearanceProposal> {
+    return this.request<IAppearanceProposal>('POST', `${API_PATHS.appearance}/generate`, {
+      operation: 'tenant.appearance.generate',
+      body: { prompt },
     });
   }
 

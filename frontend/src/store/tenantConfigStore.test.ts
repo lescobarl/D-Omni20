@@ -778,6 +778,60 @@ describe('tenantConfigStore', () => {
     });
   });
 
+  describe('asistente de marca (IA)', () => {
+    it('genera una propuesta desde una descripción y la guarda en el estado', async () => {
+      const proposal = makeAppearanceProposal();
+      setRebrandingService(
+        makeRebrandingService({
+          generateAppearanceFromPrompt: vi
+            .fn<IRebrandingService['generateAppearanceFromPrompt']>()
+            .mockResolvedValue(proposal),
+        }),
+      );
+      await useTenantConfigStore.getState().generateAppearance('paleta inmobiliaria premium');
+      const state = useTenantConfigStore.getState();
+      expect(state.appearanceProposal).toEqual(proposal);
+      expect(state.assistantStatus).toBe('success');
+      expect(state.assistantError).toBeNull();
+    });
+
+    it('pasa a loading mientras la generación del asistente está pendiente', async () => {
+      let resolve!: (value: IAppearanceProposal) => void;
+      const generateAppearanceFromPrompt = vi
+        .fn<IRebrandingService['generateAppearanceFromPrompt']>()
+        .mockImplementation(() => new Promise<IAppearanceProposal>((res) => (resolve = res)));
+      setRebrandingService(makeRebrandingService({ generateAppearanceFromPrompt }));
+      const pending = useTenantConfigStore.getState().generateAppearance('estilo sobrio');
+      expect(useTenantConfigStore.getState().assistantStatus).toBe('loading');
+      resolve(makeAppearanceProposal());
+      await pending;
+      expect(useTenantConfigStore.getState().assistantStatus).toBe('success');
+    });
+
+    it('degrade a error cuando no hay servicio de apariencia registrado', async () => {
+      await useTenantConfigStore.getState().generateAppearance('estilo sobrio');
+      const state = useTenantConfigStore.getState();
+      expect(state.assistantStatus).toBe('error');
+      expect(state.assistantError).toBe('El servicio de asistente no está disponible.');
+    });
+
+    it('propaga el mensaje de un AppError durante la generación', async () => {
+      setRebrandingService(
+        makeRebrandingService({
+          generateAppearanceFromPrompt: vi
+            .fn<IRebrandingService['generateAppearanceFromPrompt']>()
+            .mockRejectedValue(
+              new AppError('Fallo al generar', 'tenant.appearance.generate', { status: 500 }),
+            ),
+        }),
+      );
+      await useTenantConfigStore.getState().generateAppearance('estilo sobrio');
+      const state = useTenantConfigStore.getState();
+      expect(state.assistantStatus).toBe('error');
+      expect(state.assistantError).toBe('Fallo al generar');
+    });
+  });
+
   it('reset descarta el estado y vuelve al inicial por defecto', () => {
     useTenantConfigStore.setState({
       appearance: makeAppearance(),

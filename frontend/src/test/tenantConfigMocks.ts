@@ -326,6 +326,9 @@ export function makeRebrandingService(
     extractUrlStyles: vi
       .fn<IRebrandingService['extractUrlStyles']>()
       .mockResolvedValue(makeAppearanceProposal()),
+    generateAppearanceFromPrompt: vi
+      .fn<IRebrandingService['generateAppearanceFromPrompt']>()
+      .mockResolvedValue(makeAppearanceProposal()),
     listRebrandingConfigs: vi
       .fn<IRebrandingService['listRebrandingConfigs']>()
       .mockResolvedValue([makeRebrandingConfig()]),

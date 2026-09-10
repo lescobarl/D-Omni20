@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import (
+    get_ai_service,
     get_current_tenant,
     get_rebranding_config_repository,
     get_rebranding_service,
@@ -27,6 +28,7 @@ from app.repositories.interfaces import (
     ITenantAppearanceRepository,
 )
 from app.schemas.tenant_config import (
+    AppearanceGenerateRequest,
     AppearanceProposal,
     ExtractUrlRequest,
     RebrandingConfigCreate,
@@ -34,7 +36,7 @@ from app.schemas.tenant_config import (
     TenantAppearanceRead,
     TenantAppearanceUpsert,
 )
-from app.services.interfaces import IRebrandingService
+from app.services.interfaces import IAiService, IRebrandingService
 
 router = APIRouter(prefix="/tenant/appearance", tags=["tenant-appearance"])
 
@@ -86,6 +88,18 @@ def extract_url_styles(
 ) -> AppearanceProposal:
     """Analiza una URL de marca y propone paleta, tipografías y logo (sin persistir)."""
     return rebranding.extract_url_styles(url=data.url)
+
+
+@router.post("/generate", response_model=AppearanceProposal)
+def generate_appearance(
+    data: AppearanceGenerateRequest,
+    _auth: User = Depends(require_role(Role.ADMIN, Role.CONFIGURADOR)),
+    tenant_id: uuid.UUID = Depends(get_current_tenant),
+    ai_service: IAiService = Depends(get_ai_service),
+) -> AppearanceProposal:
+    """Genera con IA una propuesta de apariencia desde una descripción (sin persistir)."""
+    result = ai_service.generate_appearance(tenant_id=tenant_id, prompt=data.prompt)
+    return AppearanceProposal.model_validate(result.config)
 
 
 @router.get("/rebranding", response_model=list[RebrandingConfigRead])

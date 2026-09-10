@@ -74,6 +74,23 @@ class ExtractUrlRequest(BaseModel):
     )
 
 
+class AppearanceGenerateRequest(BaseModel):
+    """Solicitud de generación de una propuesta de apariencia con IA.
+
+    ``prompt`` describe en lenguaje natural el sector y el estilo deseado
+    (p. ej. «paleta sobria para una inmobiliaria premium»). El backend llama al
+    motor DeepSeek y devuelve una :class:`AppearanceProposal` sin persistir.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(
+        min_length=3,
+        max_length=2000,
+        examples=["Paleta elegante y sobria para una inmobiliaria de lujo"],
+    )
+
+
 class AppearanceProposal(BaseModel):
     """Propuesta de apariencia derivada de una URL (paleta, tipografía y logo).
 
