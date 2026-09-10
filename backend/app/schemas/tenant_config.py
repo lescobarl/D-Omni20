@@ -29,6 +29,18 @@ COLOR_PATTERN = r"^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 ContentKind = Literal["faq", "document", "rule", "product", "portal"]
 # C-3 — Portales multired: WhatsApp, SMS (Twilio), Instagram, Messenger y Webchat.
 ChannelType = Literal["whatsapp", "sms", "instagram", "messenger", "webchat"]
+# Look del portal de configuración (Studio): acento y superficie por tenant.
+PortalAccent = Literal["brand", "neutral"]
+PortalSurface = Literal["light", "tint"]
+
+
+class PortalLookUpsert(BaseModel):
+    """Preferencias de look del portal de configuración (solo admin)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    portal_accent: PortalAccent = "brand"
+    portal_surface: PortalSurface = "light"
 
 
 class TenantAppearanceUpsert(BaseModel):
@@ -57,6 +69,8 @@ class TenantAppearanceRead(ORMModel, SyncFields):
     brand_badge: str
     logo_url: str | None
     font_family: str | None
+    portal_accent: PortalAccent
+    portal_surface: PortalSurface
     version: int
     created_at: datetime
 

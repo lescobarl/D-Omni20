@@ -618,6 +618,17 @@ class ITenantAppearanceRepository(ABC):
         font_family: str | None,
     ) -> TenantAppearance: ...
 
+    @abstractmethod
+    def update_portal_look(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        portal_accent: str,
+        portal_surface: str,
+    ) -> TenantAppearance:
+        """Actualiza solo el look del portal de configuración (editable por admin)."""
+        ...
+
 
 class IRebrandingConfigRepository(ABC):
     """Configuraciones de rebranding por URL (Fase 5), únicas por tenant.

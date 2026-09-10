@@ -56,6 +56,8 @@ class TenantAppearance(Base, UUIDPrimaryKeyMixin, TimestampsMixin, SyncTupleMixi
     brand_badge: Mapped[str] = mapped_column(String(9), nullable=False, default="#2563EB")
     logo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     font_family: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    portal_accent: Mapped[str] = mapped_column(String(16), nullable=False, default="brand")
+    portal_surface: Mapped[str] = mapped_column(String(16), nullable=False, default="light")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

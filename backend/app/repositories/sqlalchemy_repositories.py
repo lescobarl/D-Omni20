@@ -1206,6 +1206,29 @@ class SqlAlchemyTenantAppearanceRepository(ITenantAppearanceRepository):
         self._session.flush()
         return row
 
+    def update_portal_look(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        portal_accent: str,
+        portal_surface: str,
+    ) -> TenantAppearance:
+        """Actualiza solo el look del portal; crea la fila con defaults si no existe."""
+        existing = self.get(tenant_id=tenant_id)
+        if existing is not None:
+            existing.portal_accent = portal_accent
+            existing.portal_surface = portal_surface
+            self._session.flush()
+            return existing
+        row = TenantAppearance(
+            tenant_id=tenant_id,
+            portal_accent=portal_accent,
+            portal_surface=portal_surface,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
 
 class SqlAlchemyRebrandingConfigRepository(IRebrandingConfigRepository):
     """Configuraciones de rebranding por URL (Fase 5) — SQLAlchemy."""

@@ -31,6 +31,7 @@ from app.schemas.tenant_config import (
     AppearanceGenerateRequest,
     AppearanceProposal,
     ExtractUrlRequest,
+    PortalLookUpsert,
     RebrandingConfigCreate,
     RebrandingConfigRead,
     TenantAppearanceRead,
@@ -75,6 +76,22 @@ def upsert_appearance(
         brand_badge=data.brand_badge,
         logo_url=data.logo_url,
         font_family=data.font_family,
+    )
+    return TenantAppearanceRead.model_validate(row)
+
+
+@router.put("/portal-look", response_model=TenantAppearanceRead)
+def update_portal_look(
+    data: PortalLookUpsert,
+    _auth: User = Depends(require_role(Role.ADMIN)),
+    tenant_id: uuid.UUID = Depends(get_current_tenant),
+    repository: ITenantAppearanceRepository = Depends(get_tenant_appearance_repository),
+) -> TenantAppearanceRead:
+    """Actualiza el look del portal de configuración (por tenant, solo admin)."""
+    row = repository.update_portal_look(
+        tenant_id=tenant_id,
+        portal_accent=data.portal_accent,
+        portal_surface=data.portal_surface,
     )
     return TenantAppearanceRead.model_validate(row)
 
