@@ -1,5 +1,5 @@
 import { act } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SlaSettings } from '@/components/Crm/SlaSettings';
@@ -15,6 +15,7 @@ describe('SlaSettings', () => {
   });
 
   afterEach(() => {
+    cleanup();
     useCrmStore.getState().reset();
     setCrmService(null);
   });
@@ -117,6 +118,7 @@ describe('SlaSettings', () => {
   it('no presenta violaciones de accesibilidad', async () => {
     useCrmStore.setState({ stages: [makeStage()], sla: [makeSla()] });
     const { container } = render(<SlaSettings />);
+    await act(async () => {});
     await expect(container).toHaveNoViolations();
   });
 });

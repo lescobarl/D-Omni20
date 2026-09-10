@@ -1,5 +1,5 @@
 import { act } from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DealDrawer } from '@/components/Crm/DealDrawer';
@@ -37,6 +37,7 @@ describe('DealDrawer', () => {
   });
 
   afterEach(() => {
+    cleanup();
     useCrmStore.getState().reset();
     setCrmService(null);
   });
@@ -89,7 +90,9 @@ describe('DealDrawer', () => {
     setCrmService(service);
     seedDealState();
     render(<DealDrawer dealId={DEAL_ID} onClose={() => undefined} />);
-    await user.selectOptions(screen.getByLabelText('Etapa destino *'), LOST_ID);
+    await act(async () => {
+      await user.selectOptions(screen.getByLabelText('Etapa destino *'), LOST_ID);
+    });
     expect(screen.getByText('Motivo de la pérdida *')).toBeInTheDocument();
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Guardar movimiento' }));
@@ -108,11 +111,13 @@ describe('DealDrawer', () => {
     setCrmService(service);
     seedDealState();
     render(<DealDrawer dealId={DEAL_ID} onClose={() => undefined} />);
-    await user.selectOptions(screen.getByLabelText('Etapa destino *'), LOST_ID);
-    await user.type(
-      screen.getByLabelText('Motivo de la pérdida *'),
-      'Cliente se fue con la competencia',
-    );
+    await act(async () => {
+      await user.selectOptions(screen.getByLabelText('Etapa destino *'), LOST_ID);
+      await user.type(
+        screen.getByLabelText('Motivo de la pérdida *'),
+        'Cliente se fue con la competencia',
+      );
+    });
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Guardar movimiento' }));
     });
@@ -164,7 +169,9 @@ describe('DealDrawer', () => {
     setCrmService(service);
     seedDealState();
     render(<DealDrawer dealId={DEAL_ID} onClose={() => undefined} />);
-    await user.type(screen.getByLabelText('Título *'), 'Solicitar documentación');
+    await act(async () => {
+      await user.type(screen.getByLabelText('Título *'), 'Solicitar documentación');
+    });
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Crear tarea' }));
     });
@@ -181,6 +188,7 @@ describe('DealDrawer', () => {
     setCrmService(service);
     seedDealState();
     const { container } = render(<DealDrawer dealId={DEAL_ID} onClose={() => undefined} />);
+    await act(async () => {});
     await expect(container).toHaveNoViolations();
   });
 });
