@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import type { IDealRead } from '@/api/types';
 import { useCrmStore } from '@/store/crmStore';
-import { Badge } from '@/components/ui';
-import { formatCurrency, getSlaBadge } from './crmFormat';
+import { Badge, Tooltip } from '@/components/ui';
+import { formatCurrency, getSlaBadge, getSlaTooltip } from './crmFormat';
 
 interface IDealCardProps {
   /** Oportunidad a mostrar. */
@@ -18,6 +18,7 @@ interface IDealCardProps {
 export function DealCard({ deal, onOpen }: IDealCardProps): ReactElement {
   const sla = useCrmStore((state) => state.sla.find((policy) => policy.stage_id === deal.stage_id));
   const badge = getSlaBadge(deal, sla);
+  const slaTooltip = getSlaTooltip(deal, sla);
   const hasProbability = deal.probability !== null && deal.probability !== undefined;
 
   return (
@@ -40,7 +41,14 @@ export function DealCard({ deal, onOpen }: IDealCardProps): ReactElement {
           <Badge tone="muted">Sin propietario</Badge>
         )}
         {hasProbability && <Badge tone="sky">{deal.probability}%</Badge>}
-        {badge !== null && <Badge className={badge.className}>{badge.label}</Badge>}
+        {badge !== null &&
+          (slaTooltip === null ? (
+            <Badge className={badge.className}>{badge.label}</Badge>
+          ) : (
+            <Tooltip content={slaTooltip}>
+              <Badge className={badge.className}>{badge.label}</Badge>
+            </Tooltip>
+          ))}
       </div>
     </button>
   );

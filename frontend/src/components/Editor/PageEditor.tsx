@@ -20,6 +20,8 @@
  */
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { EditorLayout } from '@/components/Editor/EditorLayout';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 import { EditorStoreContext, type EditorStoreApi } from '@/store/editorStoreContext';
 import {
   deserializeLandingConfig,
@@ -834,9 +836,12 @@ export function PageEditor({
             />
             {ui.showSlug && (
               <>
-                <label htmlFor={ui.slugInputId} className="text-sm font-medium text-slate-600">
-                  Slug
-                </label>
+                <span className="flex items-center gap-0.5">
+                  <label htmlFor={ui.slugInputId} className="text-sm font-medium text-slate-600">
+                    Slug
+                  </label>
+                  <FieldHelp content={fieldHelpText('editor.slug')} label="Ayuda: slug" />
+                </span>
                 <input
                   id={ui.slugInputId}
                   type="text"

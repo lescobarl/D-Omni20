@@ -32,6 +32,8 @@ import type {
   IRecipientFileInput,
 } from '@/services/operationsService';
 import { useOperationsStore } from '@/store/operationsStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 import { getLandingService } from '@/store/editorStore';
 import type { IAppConfig } from '@/types/config';
 
@@ -524,9 +526,15 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                   />
                 </div>
                 <div>
-                  <label htmlFor="campaign-template" className="block text-sm text-slate-600">
-                    Plantilla
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="campaign-template" className="text-sm text-slate-600">
+                      Plantilla
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('operations.campaign_template')}
+                      label="Ayuda: plantilla"
+                    />
+                  </span>
                   <input
                     id="campaign-template"
                     type="text"
@@ -554,9 +562,15 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="campaign-schedule" className="block text-sm text-slate-600">
-                    Programación
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="campaign-schedule" className="text-sm text-slate-600">
+                      Programación
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('operations.campaign_schedule')}
+                      label="Ayuda: programación"
+                    />
+                  </span>
                   <input
                     id="campaign-schedule"
                     type="text"
@@ -660,12 +674,15 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                 </div>
                 {form.triggerType === 'event' && (
                   <div>
-                    <label
-                      htmlFor="campaign-trigger-event"
-                      className="block text-sm text-slate-600"
-                    >
-                      Evento de disparo
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="campaign-trigger-event" className="text-sm text-slate-600">
+                        Evento de disparo
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.campaign_trigger_event')}
+                        label="Ayuda: evento de disparo"
+                      />
+                    </span>
                     <select
                       id="campaign-trigger-event"
                       value={form.triggerEvent}
@@ -836,7 +853,11 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
 
                         <div className="mt-4">
                           <p className="text-sm font-medium text-slate-700">Añadir destinatario</p>
-                          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <FieldHelp
+                              content={fieldHelpText('operations.campaign_recipient_contact')}
+                              label="Ayuda: id de destinatario"
+                            />
                             <input
                               type="text"
                               value={recipientContactId}
@@ -941,6 +962,11 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                               }
                               rows={3}
                               className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-xs"
+                              aria-label="Contenido CSV de destinatarios"
+                            />
+                            <FieldHelp
+                              content={fieldHelpText('operations.campaign_recipients_csv')}
+                              label="Ayuda: CSV de destinatarios"
                             />
                             <button
                               type="button"
@@ -1130,6 +1156,11 @@ export function CampaignsSection({ config }: { config: IAppConfig }): ReactEleme
                                   placeholder={'phone,name\n5215512345678,Ana García'}
                                   rows={3}
                                   className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-xs"
+                                  aria-label="Contenido CSV de destinatarios del archivo"
+                                />
+                                <FieldHelp
+                                  content={fieldHelpText('operations.campaign_recipient_file_csv')}
+                                  label="Ayuda: CSV del archivo de destinatarios"
                                 />
                                 <button
                                   type="button"

@@ -14,6 +14,8 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import type { IQuoteLineInput } from '@/services/workflowService';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 import { resolveLandingContext, useCurrentLanding } from './landingContext';
 
 /** Monedas ISO 4217 (minúsculas) soportadas por el generador. */
@@ -238,9 +240,15 @@ export function QuoteGeneratorWorkflow(): ReactElement {
         </div>
 
         <div>
-          <label htmlFor="quote-tax" className="mb-1 block text-xs font-medium text-slate-600">
-            Tasa de impuesto (puntos base, 0–10000)
-          </label>
+          <span className="flex items-center gap-1">
+            <label htmlFor="quote-tax" className="text-xs font-medium text-slate-600">
+              Tasa de impuesto (puntos base, 0–10000)
+            </label>
+            <FieldHelp
+              content={fieldHelpText('workflows.tax_basis_points')}
+              label="Ayuda: tasa de impuesto"
+            />
+          </span>
           <input
             id="quote-tax"
             type="number"

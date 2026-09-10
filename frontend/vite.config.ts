@@ -40,6 +40,7 @@ const NODE_TEST_FILES = [
   'src/components/Crm/crmFormat.test.ts',
   'src/components/Editor/dnd/dragData.test.ts',
   'src/components/Editor/VisualSchema/schemaTree.test.ts',
+  'src/config/fieldHelp.test.ts',
   'src/services/*.test.ts',
 ];
 

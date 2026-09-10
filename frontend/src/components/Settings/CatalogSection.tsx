@@ -136,7 +136,10 @@ export function CatalogSection(): ReactElement {
   const isLoading = catalogStatus === 'loading' && catalogItems.length === 0;
 
   return (
-    <section aria-labelledby="catalog-heading">
+    <section
+      aria-labelledby="catalog-heading"
+      className="mx-auto w-full max-w-6xl rounded-2xl border border-edge/70 bg-surface p-6 shadow-panel lg:p-8"
+    >
       <h2 id="catalog-heading" className="text-lg font-semibold text-slate-900">
         Catálogo
       </h2>

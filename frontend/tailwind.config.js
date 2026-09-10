@@ -30,6 +30,20 @@ export default {
           900: 'rgb(var(--omni-accent-900, 30 58 138) / <alpha-value>)',
           950: 'rgb(var(--omni-accent-950, 23 37 84) / <alpha-value>)',
         },
+        /* Semántica de superficies y texto. Leen las variables --omni-* que
+           applyTheme escribe con la apariencia del tenant: recolorear el módulo
+           de configuración es editar Apariencia (cero campos nuevos). */
+        canvas: 'rgb(var(--omni-surface-muted, 248 250 252) / <alpha-value>)',
+        surface: {
+          DEFAULT: 'rgb(var(--omni-surface, 255 255 255) / <alpha-value>)',
+          muted: 'rgb(var(--omni-surface-muted, 248 250 252) / <alpha-value>)',
+          strong: 'rgb(var(--omni-surface-strong, 226 232 240) / <alpha-value>)',
+        },
+        edge: 'rgb(var(--omni-surface-strong, 226 232 240) / <alpha-value>)',
+        ink: {
+          DEFAULT: 'rgb(var(--omni-text, 15 23 42) / <alpha-value>)',
+          muted: 'rgb(var(--omni-text-muted, 100 116 139) / <alpha-value>)',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'Arial', 'sans-serif'],

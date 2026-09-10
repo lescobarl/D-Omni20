@@ -15,6 +15,8 @@ import { applyTheme } from '@/core/theme';
 import { proposalToTheme } from '@/services/rebrandingService';
 import { getRebrandingService, useTenantConfigStore } from '@/store/tenantConfigStore';
 import type { IAppConfig, IAppTheme } from '@/types/config';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 interface IAppearanceSectionProps {
   /** Configuración validada (aporta el tema por defecto como fallback). */
@@ -125,7 +127,11 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
   const [saved, setSaved] = useState(false);
   const [url, setUrl] = useState('');
   const [configName, setConfigName] = useState('');
+  const [assistantPrompt, setAssistantPrompt] = useState('');
   const [rebrandSaved, setRebrandSaved] = useState(false);
+  const assistantStatus = useTenantConfigStore((state) => state.assistantStatus);
+  const assistantError = useTenantConfigStore((state) => state.assistantError);
+  const generateAppearance = useTenantConfigStore((state) => state.generateAppearance);
 
   // Sección autocontenida: carga la apariencia del tenant al montar.
   useEffect(() => {
@@ -187,6 +193,14 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
     await extractUrl(url.trim());
   };
 
+  const handleGenerateAssistant = async (): Promise<void> => {
+    const prompt = assistantPrompt.trim();
+    if (prompt === '') {
+      return;
+    }
+    await generateAppearance(prompt);
+  };
+
   const handleApplyProposal = async (): Promise<void> => {
     if (appearanceProposal === null) {
       return;
@@ -233,7 +247,10 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
   const isLoading = appearanceStatus === 'loading' && !dirty;
 
   return (
-    <section aria-labelledby="appearance-heading">
+    <section
+      aria-labelledby="appearance-heading"
+      className="mx-auto w-full max-w-6xl rounded-2xl border border-edge/70 bg-surface p-6 shadow-panel lg:p-8"
+    >
       <h2 id="appearance-heading" className="text-lg font-semibold text-slate-900">
         Apariencia / Branding
       </h2>
@@ -399,163 +416,218 @@ export function AppearanceSection({ config }: IAppearanceSectionProps): ReactEle
           </div>
 
           {getRebrandingService() !== null && (
-            <div className="mt-6 rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-medium text-slate-700">Importar de URL (rebranding)</h3>
-              <p className="mt-1 text-xs text-slate-500">
-                Pega la URL pública de una marca para extraer su paleta, tipografía y logo, y
-                aplicarlos al tema del tenant con un clic.
-              </p>
-
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <label htmlFor="appearance-rebrandingUrl" className="sr-only">
-                  URL de la marca
-                </label>
-                <input
-                  id="appearance-rebrandingUrl"
-                  type="url"
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="marca.ejemplo.com"
-                  className="w-full flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleExtract()}
-                  disabled={rebrandingStatus === 'loading' || url.trim() === ''}
-                  className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {rebrandingStatus === 'loading' ? 'Extrayendo…' : 'Extraer estilos'}
-                </button>
-              </div>
-
-              {appearanceProposal !== null && (
-                <div className="mt-4 rounded-md border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-slate-700">Propuesta detectada</p>
+            <div className="mt-6 rounded-2xl border border-edge/70 bg-surface p-5 shadow-panel">
+              {config.features.aiAssistant && (
+                <div className="border-b border-edge/70 pb-5">
+                  <h3 className="text-sm font-medium text-slate-700">Asistente de marca (IA)</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Describe el sector y el estilo que buscas: la IA propone una paleta, tipografía
+                    y sello de marca para revisar antes de aplicar.
+                  </p>
+                  <div className="mt-3">
+                    <label htmlFor="assistant-prompt" className="block text-sm text-slate-600">
+                      Describe tu marca
+                    </label>
+                    <textarea
+                      id="assistant-prompt"
+                      rows={2}
+                      maxLength={2000}
+                      value={assistantPrompt}
+                      onChange={(event) => setAssistantPrompt(event.target.value)}
+                      placeholder="Paleta sobria y elegante para una inmobiliaria de lujo…"
+                      className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => void handleApplyProposal()}
-                      disabled={rebrandingStatus === 'loading'}
-                      className="rounded bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => void handleGenerateAssistant()}
+                      disabled={assistantStatus === 'loading' || assistantPrompt.trim() === ''}
+                      className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Aplicar al tema
+                      {assistantStatus === 'loading' ? 'Generando propuesta…' : 'Generar propuesta'}
                     </button>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-4">
-                    {appearanceProposal.logo_url !== null && (
-                      <img
-                        src={appearanceProposal.logo_url}
-                        alt="Logo de la marca detectada"
-                        className="h-10 w-10 rounded object-contain"
-                      />
-                    )}
-                    {appearanceProposal.detected_fonts.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {appearanceProposal.detected_fonts.map((font) => (
-                          <span
-                            key={font}
-                            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
-                          >
-                            {font}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { label: 'Primario', value: appearanceProposal.primary_color },
-                        { label: 'Acento', value: appearanceProposal.accent_color },
-                        { label: 'Superficie', value: appearanceProposal.surface_color },
-                        { label: 'Texto', value: appearanceProposal.text_color },
-                        { label: 'Insignia', value: appearanceProposal.brand_badge },
-                      ].map(
-                        (swatch) =>
-                          swatch.value !== null && (
-                            <span
-                              key={swatch.label}
-                              className="flex items-center gap-1 text-xs text-slate-600"
-                            >
-                              <span
-                                className="inline-block h-4 w-4 rounded border border-slate-200"
-                                style={{ backgroundColor: swatch.value }}
-                              />
-                              {swatch.label}
-                            </span>
-                          ),
+                    <span role="status" aria-live="polite" className="text-sm">
+                      {assistantError !== null && (
+                        <span className="text-red-600">{assistantError}</span>
                       )}
-                    </div>
+                    </span>
                   </div>
                 </div>
               )}
 
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <label htmlFor="appearance-rebrandingName" className="sr-only">
-                  Nombre de la configuración
-                </label>
-                <input
-                  id="appearance-rebrandingName"
-                  type="text"
-                  value={configName}
-                  onChange={(event) => setConfigName(event.target.value)}
-                  placeholder="Nombre de la configuración (ejemplo: Marca X)"
-                  className="w-full flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleSaveRebranding()}
-                  disabled={
-                    rebrandingStatus === 'loading' || url.trim() === '' || configName.trim() === ''
-                  }
-                  className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Guardar configuración
-                </button>
-              </div>
-
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => void handleSaveCurrentStyles()}
-                  disabled={rebrandingStatus === 'loading' || configName.trim() === ''}
-                  className="rounded border border-brand-300 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Guardar estilos actuales como backup
-                </button>
-                <p className="text-xs text-slate-500 sm:self-center">
-                  Guarda la apariencia actual del tenant sin necesidad de una URL externa.
+              <div className="pt-5">
+                <h3 className="text-sm font-medium text-slate-700">Importar de URL (rebranding)</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Pega la URL pública de una marca para extraer su paleta, tipografía y logo, y
+                  aplicarlos al tema del tenant con un clic.
                 </p>
-              </div>
 
-              <span role="status" aria-live="polite" className="mt-2 block text-sm">
-                {rebrandSaved && <span className="text-brand-700">Configuración guardada.</span>}
-                {rebrandingError !== null && (
-                  <span className="text-red-600">{rebrandingError}</span>
-                )}
-              </span>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="appearance-rebrandingUrl" className="sr-only">
+                      URL de la marca
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('appearance.branding_url')}
+                      label="Ayuda: URL de la marca"
+                    />
+                  </span>
+                  <input
+                    id="appearance-rebrandingUrl"
+                    type="url"
+                    value={url}
+                    onChange={(event) => setUrl(event.target.value)}
+                    placeholder="marca.ejemplo.com"
+                    className="w-full flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleExtract()}
+                    disabled={rebrandingStatus === 'loading' || url.trim() === ''}
+                    className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {rebrandingStatus === 'loading' ? 'Extrayendo…' : 'Extraer estilos'}
+                  </button>
+                </div>
 
-              {rebrandingConfigs.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {rebrandingConfigs.map((config) => (
-                    <li
-                      key={config.id}
-                      className="flex items-center justify-between gap-3 rounded border border-slate-200 px-3 py-2 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-700">{config.name}</p>
-                        <p className="truncate text-xs text-slate-500">{config.url}</p>
-                      </div>
+                {appearanceProposal !== null && (
+                  <div className="mt-4 rounded-md border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-slate-700">Propuesta detectada</p>
                       <button
                         type="button"
-                        onClick={() => handleDeleteRebranding(config.id)}
+                        onClick={() => void handleApplyProposal()}
                         disabled={rebrandingStatus === 'loading'}
-                        className="rounded px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                        className="rounded bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Eliminar
+                        Aplicar al tema
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-4">
+                      {appearanceProposal.logo_url !== null && (
+                        <img
+                          src={appearanceProposal.logo_url}
+                          alt="Logo de la marca detectada"
+                          className="h-10 w-10 rounded object-contain"
+                        />
+                      )}
+                      {appearanceProposal.detected_fonts.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {appearanceProposal.detected_fonts.map((font) => (
+                            <span
+                              key={font}
+                              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                            >
+                              {font}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: 'Primario', value: appearanceProposal.primary_color },
+                          { label: 'Acento', value: appearanceProposal.accent_color },
+                          { label: 'Superficie', value: appearanceProposal.surface_color },
+                          { label: 'Texto', value: appearanceProposal.text_color },
+                          { label: 'Insignia', value: appearanceProposal.brand_badge },
+                        ].map(
+                          (swatch) =>
+                            swatch.value !== null && (
+                              <span
+                                key={swatch.label}
+                                className="flex items-center gap-1 text-xs text-slate-600"
+                              >
+                                <span
+                                  className="inline-block h-4 w-4 rounded border border-slate-200"
+                                  style={{ backgroundColor: swatch.value }}
+                                />
+                                {swatch.label}
+                              </span>
+                            ),
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="appearance-rebrandingName" className="sr-only">
+                      Nombre de la configuración
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('appearance.branding_name')}
+                      label="Ayuda: nombre de la configuración"
+                    />
+                  </span>
+                  <input
+                    id="appearance-rebrandingName"
+                    type="text"
+                    value={configName}
+                    onChange={(event) => setConfigName(event.target.value)}
+                    placeholder="Nombre de la configuración (ejemplo: Marca X)"
+                    className="w-full flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveRebranding()}
+                    disabled={
+                      rebrandingStatus === 'loading' ||
+                      url.trim() === '' ||
+                      configName.trim() === ''
+                    }
+                    className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Guardar configuración
+                  </button>
+                </div>
+
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveCurrentStyles()}
+                    disabled={rebrandingStatus === 'loading' || configName.trim() === ''}
+                    className="rounded border border-brand-300 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Guardar estilos actuales como backup
+                  </button>
+                  <p className="text-xs text-slate-500 sm:self-center">
+                    Guarda la apariencia actual del tenant sin necesidad de una URL externa.
+                  </p>
+                </div>
+
+                <span role="status" aria-live="polite" className="mt-2 block text-sm">
+                  {rebrandSaved && <span className="text-brand-700">Configuración guardada.</span>}
+                  {rebrandingError !== null && (
+                    <span className="text-red-600">{rebrandingError}</span>
+                  )}
+                </span>
+
+                {rebrandingConfigs.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {rebrandingConfigs.map((config) => (
+                      <li
+                        key={config.id}
+                        className="flex items-center justify-between gap-3 rounded border border-slate-200 px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-700">{config.name}</p>
+                          <p className="truncate text-xs text-slate-500">{config.url}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRebranding(config.id)}
+                          disabled={rebrandingStatus === 'loading'}
+                          className="rounded px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Eliminar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
         </>

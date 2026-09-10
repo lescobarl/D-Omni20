@@ -25,6 +25,8 @@ import type {
 } from '@/api/types';
 import type { IContentItemInput } from '@/services/tenantConfigService';
 import { useTenantConfigStore } from '@/store/tenantConfigStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Opciones de tipo de contenido del bot (etiqueta visible + valor). */
 const KIND_OPTIONS: ReadonlyArray<{ value: IContentKind; label: string }> = [
@@ -366,7 +368,10 @@ export function ContentSection(): ReactElement {
   const isSynonymsLoading = synonymsStatus === 'loading' && synonyms.length === 0;
 
   return (
-    <section aria-labelledby="content-heading">
+    <section
+      aria-labelledby="content-heading"
+      className="mx-auto w-full max-w-6xl rounded-2xl border border-edge/70 bg-surface p-6 shadow-panel lg:p-8"
+    >
       <h2 id="content-heading" className="text-lg font-semibold text-slate-900">
         Contenido / Base de conocimientos
       </h2>
@@ -547,9 +552,15 @@ export function ContentSection(): ReactElement {
               <legend className="text-sm font-medium text-slate-700">Ingesta</legend>
               <div className="mt-2 space-y-3">
                 <div>
-                  <label htmlFor="document-file" className="block text-sm text-slate-600">
-                    Archivo (PDF, TXT o CSV)
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="document-file" className="text-sm text-slate-600">
+                      Archivo (PDF, TXT o CSV)
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('content.document_file')}
+                      label="Ayuda: archivo"
+                    />
+                  </span>
                   <input
                     id="document-file"
                     type="file"
@@ -567,9 +578,15 @@ export function ContentSection(): ReactElement {
                   </button>
                 </div>
                 <div>
-                  <label htmlFor="document-url" className="block text-sm text-slate-600">
-                    URL del documento
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="document-url" className="text-sm text-slate-600">
+                      URL del documento
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('content.document_url')}
+                      label="Ayuda: URL del documento"
+                    />
+                  </span>
                   <div className="mt-1 flex gap-2">
                     <input
                       id="document-url"
@@ -715,9 +732,15 @@ export function ContentSection(): ReactElement {
               </legend>
               <div className="mt-2 space-y-3">
                 <div>
-                  <label htmlFor="synonym-term" className="block text-sm text-slate-600">
-                    Término
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="synonym-term" className="text-sm text-slate-600">
+                      Término
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('content.synonym_term')}
+                      label="Ayuda: término"
+                    />
+                  </span>
                   <input
                     id="synonym-term"
                     type="text"
@@ -728,9 +751,15 @@ export function ContentSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="synonym-items" className="block text-sm text-slate-600">
-                    Sinónimos (separados por comas)
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="synonym-items" className="text-sm text-slate-600">
+                      Sinónimos (separados por comas)
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('content.synonym_items')}
+                      label="Ayuda: sinónimos"
+                    />
+                  </span>
                   <input
                     id="synonym-items"
                     type="text"
@@ -767,9 +796,15 @@ export function ContentSection(): ReactElement {
               <legend className="text-sm font-medium text-slate-700">Importar / Exportar</legend>
               <div className="mt-2 space-y-3">
                 <div>
-                  <label htmlFor="synonym-import" className="block text-sm text-slate-600">
-                    Contenido CSV o JSON (término,sinónimos)
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="synonym-import" className="text-sm text-slate-600">
+                      Contenido CSV o JSON (término,sinónimos)
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('content.synonym_import')}
+                      label="Ayuda: contenido de importación"
+                    />
+                  </span>
                   <textarea
                     id="synonym-import"
                     rows={3}

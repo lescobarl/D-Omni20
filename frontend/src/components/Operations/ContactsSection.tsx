@@ -16,6 +16,7 @@ import type { IContactRead } from '@/api/types';
 import type { IContactInput } from '@/services/operationsService';
 import { useOperationsStore } from '@/store/operationsStore';
 import { Badge, Button, EmptyState, ErrorState, Input } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de contactos (las etiquetas se editan como texto). */
 interface IContactFormState {
@@ -233,6 +234,7 @@ export function ContactsSection(): ReactElement {
                     value={form.state}
                     onChange={(event) => setField('state', event.target.value)}
                     placeholder="new"
+                    help={fieldHelpText('operations.contact_state')}
                   />
                   <Input
                     id="contact-source"
@@ -241,6 +243,7 @@ export function ContactsSection(): ReactElement {
                     value={form.source}
                     onChange={(event) => setField('source', event.target.value)}
                     placeholder="manual"
+                    help={fieldHelpText('operations.contact_source')}
                   />
                 </div>
                 <Input
@@ -250,6 +253,7 @@ export function ContactsSection(): ReactElement {
                   value={form.externalContactId}
                   onChange={(event) => setField('externalContactId', event.target.value)}
                   placeholder="wa:521234567890"
+                  help={fieldHelpText('operations.contact_external_id')}
                 />
               </div>
             </fieldset>

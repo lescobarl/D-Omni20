@@ -20,6 +20,8 @@ import type {
 import type { IBotProviderInput, IKeywordInput } from '@/services/botService';
 import { useAdsStore } from '@/store/adsStore';
 import { useBotStore } from '@/store/botStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de un proveedor de IA. */
 interface IProviderFormState {
@@ -359,7 +361,10 @@ export function BotsSection(): ReactElement {
   const isKeywordsLoading = keywordsStatus === 'loading' && keywords.length === 0;
 
   return (
-    <section aria-labelledby="bots-heading">
+    <section
+      aria-labelledby="bots-heading"
+      className="mx-auto w-full max-w-6xl rounded-2xl border border-edge/70 bg-surface p-6 shadow-panel lg:p-8"
+    >
       <h2 id="bots-heading" className="text-lg font-semibold text-slate-900">
         Bots
       </h2>
@@ -381,9 +386,15 @@ export function BotsSection(): ReactElement {
               </legend>
               <div className="mt-2 space-y-3">
                 <div>
-                  <label htmlFor="provider-kind" className="block text-sm text-slate-600">
-                    Tipo de proveedor *
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="provider-kind" className="text-sm text-slate-600">
+                      Tipo de proveedor *
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('bots.provider_kind')}
+                      label="Ayuda: tipo de proveedor"
+                    />
+                  </span>
                   <input
                     id="provider-kind"
                     type="text"
@@ -395,9 +406,15 @@ export function BotsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="provider-order" className="block text-sm text-slate-600">
-                    Orden *
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="provider-order" className="text-sm text-slate-600">
+                      Orden *
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('bots.provider_order')}
+                      label="Ayuda: orden del proveedor"
+                    />
+                  </span>
                   <input
                     id="provider-order"
                     type="number"
@@ -409,9 +426,15 @@ export function BotsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="provider-model" className="block text-sm text-slate-600">
-                    Modelo
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="provider-model" className="text-sm text-slate-600">
+                      Modelo
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('bots.provider_model')}
+                      label="Ayuda: modelo"
+                    />
+                  </span>
                   <input
                     id="provider-model"
                     type="text"
@@ -423,9 +446,15 @@ export function BotsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="provider-temperature" className="block text-sm text-slate-600">
-                    Temperatura
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="provider-temperature" className="text-sm text-slate-600">
+                      Temperatura
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('bots.provider_temperature')}
+                      label="Ayuda: temperatura"
+                    />
+                  </span>
                   <input
                     id="provider-temperature"
                     type="text"
@@ -436,9 +465,15 @@ export function BotsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="provider-prompt-base" className="block text-sm text-slate-600">
-                    Prompt base
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="provider-prompt-base" className="text-sm text-slate-600">
+                      Prompt base
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('bots.provider_prompt_base')}
+                      label="Ayuda: prompt base"
+                    />
+                  </span>
                   <textarea
                     id="provider-prompt-base"
                     rows={3}
@@ -459,6 +494,10 @@ export function BotsSection(): ReactElement {
                   <label htmlFor="provider-enabled" className="text-sm text-slate-600">
                     Proveedor habilitado
                   </label>
+                  <FieldHelp
+                    content={fieldHelpText('bots.provider_enabled')}
+                    label="Ayuda: proveedor habilitado"
+                  />
                 </div>
               </div>
             </fieldset>

@@ -25,6 +25,8 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { IInterventionRead } from '@/api/types';
 import type { IInterventionInput } from '@/services/operationsService';
 import { useOperationsStore } from '@/store/operationsStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de intervenciones (fechas como texto ISO 8601 opcional). */
 interface IInterventionFormState {
@@ -237,12 +239,15 @@ export function InterventionsSection(): ReactElement {
                 </legend>
                 <div className="mt-2 space-y-3">
                   <div>
-                    <label
-                      htmlFor="intervention-conversation"
-                      className="block text-sm text-slate-600"
-                    >
-                      Conversación
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="intervention-conversation" className="text-sm text-slate-600">
+                        Conversación
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.intervention_conversation')}
+                        label="Ayuda: conversación"
+                      />
+                    </span>
                     <input
                       id="intervention-conversation"
                       type="text"
@@ -253,9 +258,15 @@ export function InterventionsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="intervention-state" className="block text-sm text-slate-600">
-                      Estado
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="intervention-state" className="text-sm text-slate-600">
+                        Estado
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.intervention_state')}
+                        label="Ayuda: estado"
+                      />
+                    </span>
                     <select
                       id="intervention-state"
                       value={form.state}
@@ -296,9 +307,15 @@ export function InterventionsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="intervention-assigned" className="block text-sm text-slate-600">
-                      Asignación
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="intervention-assigned" className="text-sm text-slate-600">
+                        Asignación
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.intervention_assignment')}
+                        label="Ayuda: asignación"
+                      />
+                    </span>
                     <input
                       id="intervention-assigned"
                       type="text"
@@ -309,9 +326,15 @@ export function InterventionsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="intervention-resolved" className="block text-sm text-slate-600">
-                      Resolución
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="intervention-resolved" className="text-sm text-slate-600">
+                        Resolución
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.intervention_resolution')}
+                        label="Ayuda: resolución"
+                      />
+                    </span>
                     <input
                       id="intervention-resolved"
                       type="text"

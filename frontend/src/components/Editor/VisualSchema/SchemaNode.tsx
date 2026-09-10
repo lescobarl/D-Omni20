@@ -12,6 +12,8 @@
 import type { ChangeEvent, DragEvent, ReactElement } from 'react';
 import type { SchemaNode, SchemaNodePatch, SchemaNodeType } from './schemaTree';
 import { TypeSelector } from './TypeSelector';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Sangría en píxeles por nivel de profundidad. */
 const INDENT_PER_DEPTH = 14;
@@ -137,13 +139,19 @@ export function SchemaNode({
             className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 focus:border-brand-300 focus:bg-white focus:outline-none"
           />
         ) : (
-          <input
-            type="text"
-            value={node.key}
-            onChange={handleKeyChange}
-            aria-label={`Clave de ${node.key === '' ? 'la propiedad' : node.key}`}
-            className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-slate-800 focus:border-brand-300 focus:bg-white focus:outline-none"
-          />
+          <span className="flex min-w-0 flex-1 items-center gap-1">
+            <input
+              type="text"
+              value={node.key}
+              onChange={handleKeyChange}
+              aria-label={`Clave de ${node.key === '' ? 'la propiedad' : node.key}`}
+              className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-slate-800 focus:border-brand-300 focus:bg-white focus:outline-none"
+            />
+            <FieldHelp
+              content={fieldHelpText('editor.prop_key')}
+              label="Ayuda: clave de la propiedad"
+            />
+          </span>
         )}
 
         <TypeSelector id={`type-${node.id}`} value={node.type} onChange={handleTypeChange} />

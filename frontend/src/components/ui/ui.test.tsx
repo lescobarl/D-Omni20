@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { Badge, Button, EmptyState, ErrorState, Input, Modal, Toast } from '.';
+import { Badge, Button, EmptyState, ErrorState, FieldHelp, Input, Modal, Toast, Tooltip } from '.';
 
 describe('Librería de componentes compartidos (ui)', () => {
   describe('Button', () => {
@@ -158,6 +158,64 @@ describe('Librería de componentes compartidos (ui)', () => {
       render(<Toast items={[{ id: '1', tone: 'success', message: 'Contacto creado' }]} />);
       expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
       expect(screen.getByText('Contacto creado')).toBeInTheDocument();
+    });
+  });
+
+  describe('Tooltip', () => {
+    it('vincula el disparador con el globo vía aria-describedby', () => {
+      render(
+        <Tooltip content="Horas máximas para responder.">
+          <button type="button">Ayuda</button>
+        </Tooltip>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Ayuda' });
+      const tooltipId = trigger.getAttribute('aria-describedby');
+      expect(tooltipId).not.toBeNull();
+      expect(document.getElementById(tooltipId ?? '')).toHaveTextContent(
+        'Horas máximas para responder.',
+      );
+    });
+
+    it('muestra el globo en hover y foco y lo oculta con Escape', () => {
+      const { container } = render(
+        <Tooltip content="Horas máximas para responder.">
+          <button type="button">Ayuda</button>
+        </Tooltip>,
+      );
+      const bubble = container.querySelector('[role="tooltip"]');
+      expect(bubble).not.toBeNull();
+      expect(bubble).toHaveClass('invisible');
+
+      fireEvent.mouseEnter(screen.getByRole('button', { name: 'Ayuda' }));
+      expect(bubble).toHaveClass('visible');
+
+      fireEvent.mouseLeave(screen.getByRole('button', { name: 'Ayuda' }));
+      expect(bubble).toHaveClass('invisible');
+
+      fireEvent.focus(screen.getByRole('button', { name: 'Ayuda' }));
+      expect(bubble).toHaveClass('visible');
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Ayuda' }), { key: 'Escape' });
+      expect(bubble).toHaveClass('invisible');
+    });
+  });
+
+  describe('FieldHelp', () => {
+    it('expone un botón de ayuda con nombre accesible propio', () => {
+      render(<FieldHelp content="Código único del producto." label="Ayuda: SKU" />);
+      expect(screen.getByRole('button', { name: 'Ayuda: SKU' })).toBeInTheDocument();
+    });
+
+    it('muestra el texto de ayuda al enfocar el icono', () => {
+      const { container } = render(
+        <FieldHelp content="Código único del producto." label="Ayuda: SKU" />,
+      );
+      const bubble = container.querySelector('[role="tooltip"]');
+      expect(bubble).not.toBeNull();
+      expect(bubble).toHaveClass('invisible');
+      fireEvent.focus(screen.getByRole('button', { name: 'Ayuda: SKU' }));
+      expect(bubble).toHaveClass('visible');
+      expect(bubble).toHaveTextContent('Código único del producto.');
     });
   });
 });

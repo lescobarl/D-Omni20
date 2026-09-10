@@ -2,6 +2,8 @@ import { useState, type FormEvent, type ReactElement } from 'react';
 import type { ITaskRead } from '@/api/types';
 import type { ITaskInput } from '@/services/crmService';
 import { useCrmStore } from '@/store/crmStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 type TaskFilter = 'todas' | 'pending' | 'done' | 'cancelled';
 
@@ -165,15 +167,21 @@ export function TasksSection(): ReactElement {
               <option value="high">Alta</option>
             </select>
           </label>
-          <label className="block text-sm text-slate-600">
-            Asignada a (id)
+          <div>
+            <span className="flex items-center gap-1">
+              <label htmlFor="task-assignee-id" className="text-sm text-slate-600">
+                Asignada a (id)
+              </label>
+              <FieldHelp content={fieldHelpText('crm.task_assignee')} label="Ayuda: asignada a" />
+            </span>
             <input
+              id="task-assignee-id"
               type="text"
               value={form.assigneeId}
               onChange={(event) => setField('assigneeId', event.target.value)}
               className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
             />
-          </label>
+          </div>
         </div>
         {formError !== null && (
           <p className="mt-2 text-sm text-red-600" role="status">

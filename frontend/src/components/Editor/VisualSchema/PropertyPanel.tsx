@@ -18,6 +18,8 @@ import {
   type StringFormat,
 } from './schemaTree';
 import { TypeSelector } from './TypeSelector';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 interface IPropertyPanelProps {
   /** Nodo seleccionado a editar. */
@@ -87,9 +89,15 @@ export function PropertyPanel({
         </div>
       ) : (
         <div>
-          <label htmlFor="prop-key" className={labelClass}>
-            Clave de la propiedad
-          </label>
+          <span className="flex items-center gap-1">
+            <label htmlFor="prop-key" className="text-xs font-medium text-slate-600">
+              Clave de la propiedad
+            </label>
+            <FieldHelp
+              content={fieldHelpText('editor.prop_key')}
+              label="Ayuda: clave de la propiedad"
+            />
+          </span>
           <input
             id="prop-key"
             type="text"
@@ -101,9 +109,12 @@ export function PropertyPanel({
       )}
 
       <div>
-        <label htmlFor="prop-type" className={labelClass}>
-          Tipo de dato
-        </label>
+        <span className="flex items-center gap-1">
+          <label htmlFor="prop-type" className="text-xs font-medium text-slate-600">
+            Tipo de dato
+          </label>
+          <FieldHelp content={fieldHelpText('editor.prop_type')} label="Ayuda: tipo de dato" />
+        </span>
         <div className="mt-1">
           <TypeSelector id="prop-type" value={node.type} onChange={handleTypeChange} />
         </div>
@@ -136,9 +147,12 @@ export function PropertyPanel({
 
       {node.type === 'string' && (
         <div>
-          <label htmlFor="prop-format" className={labelClass}>
-            Formato
-          </label>
+          <span className="flex items-center gap-1">
+            <label htmlFor="prop-format" className="text-xs font-medium text-slate-600">
+              Formato
+            </label>
+            <FieldHelp content={fieldHelpText('editor.prop_format')} label="Ayuda: formato" />
+          </span>
           <select
             id="prop-format"
             value={node.format}
@@ -156,9 +170,15 @@ export function PropertyPanel({
 
       {node.type === 'array' && (
         <div>
-          <label htmlFor="prop-items" className={labelClass}>
-            Tipo de los elementos
-          </label>
+          <span className="flex items-center gap-1">
+            <label htmlFor="prop-items" className="text-xs font-medium text-slate-600">
+              Tipo de los elementos
+            </label>
+            <FieldHelp
+              content={fieldHelpText('editor.prop_items_type')}
+              label="Ayuda: tipo de los elementos"
+            />
+          </span>
           <div className="mt-1">
             <TypeSelector
               id="prop-items"

@@ -16,6 +16,8 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { ITemplateRead } from '@/api/types';
 import type { ITemplateInput } from '@/services/operationsService';
 import { useOperationsStore } from '@/store/operationsStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de plantillas (las variables se editan como texto). */
 interface ITemplateFormState {
@@ -182,9 +184,15 @@ export function TemplatesSection(): ReactElement {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="template-type" className="block text-sm text-slate-600">
-                      Tipo
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="template-type" className="text-sm text-slate-600">
+                        Tipo
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.template_type')}
+                        label="Ayuda: tipo de plantilla"
+                      />
+                    </span>
                     <input
                       id="template-type"
                       type="text"
@@ -195,9 +203,15 @@ export function TemplatesSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="template-variables" className="block text-sm text-slate-600">
-                      Variables
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="template-variables" className="text-sm text-slate-600">
+                        Variables
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('operations.template_variables')}
+                        label="Ayuda: variables"
+                      />
+                    </span>
                     <input
                       id="template-variables"
                       type="text"

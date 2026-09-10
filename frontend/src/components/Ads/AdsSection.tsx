@@ -15,6 +15,8 @@ import type { IAdCampaignRead, ILandingRead } from '@/api/types';
 import type { IAdCampaignInput } from '@/services/adsService';
 import { useAdsStore } from '@/store/adsStore';
 import { getLandingService } from '@/store/editorStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 interface IAdCampaignFormState {
   /** Nombre de la campaña (obligatorio). */
@@ -221,9 +223,12 @@ export function AdsSection(): ReactElement {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="adcampaign-status" className="block text-sm text-slate-600">
-                      Estado
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-status" className="text-sm text-slate-600">
+                        Estado
+                      </label>
+                      <FieldHelp content={fieldHelpText('ads.status')} label="Ayuda: estado" />
+                    </span>
                     <input
                       id="adcampaign-status"
                       type="text"
@@ -248,9 +253,15 @@ export function AdsSection(): ReactElement {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="adcampaign-utm-source" className="block text-sm text-slate-600">
-                      UTM Fuente
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-utm-source" className="text-sm text-slate-600">
+                        UTM Fuente
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('ads.utm_source')}
+                        label="Ayuda: UTM fuente"
+                      />
+                    </span>
                     <input
                       id="adcampaign-utm-source"
                       type="text"
@@ -261,9 +272,15 @@ export function AdsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="adcampaign-utm-medium" className="block text-sm text-slate-600">
-                      UTM Medio
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-utm-medium" className="text-sm text-slate-600">
+                        UTM Medio
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('ads.utm_medium')}
+                        label="Ayuda: UTM medio"
+                      />
+                    </span>
                     <input
                       id="adcampaign-utm-medium"
                       type="text"
@@ -275,9 +292,15 @@ export function AdsSection(): ReactElement {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="adcampaign-utm-campaign" className="block text-sm text-slate-600">
-                    UTM Campaña
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="adcampaign-utm-campaign" className="text-sm text-slate-600">
+                      UTM Campaña
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('ads.utm_campaign')}
+                      label="Ayuda: UTM campaña"
+                    />
+                  </span>
                   <input
                     id="adcampaign-utm-campaign"
                     type="text"
@@ -289,12 +312,15 @@ export function AdsSection(): ReactElement {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label
-                      htmlFor="adcampaign-utm-content"
-                      className="block text-sm text-slate-600"
-                    >
-                      UTM Contenido
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-utm-content" className="text-sm text-slate-600">
+                        UTM Contenido
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('ads.utm_content')}
+                        label="Ayuda: UTM contenido"
+                      />
+                    </span>
                     <input
                       id="adcampaign-utm-content"
                       type="text"
@@ -305,9 +331,15 @@ export function AdsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="adcampaign-utm-term" className="block text-sm text-slate-600">
-                      UTM Término
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-utm-term" className="text-sm text-slate-600">
+                        UTM Término
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('ads.utm_term')}
+                        label="Ayuda: UTM término"
+                      />
+                    </span>
                     <input
                       id="adcampaign-utm-term"
                       type="text"
@@ -338,9 +370,15 @@ export function AdsSection(): ReactElement {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="adcampaign-budget" className="block text-sm text-slate-600">
-                      Presupuesto (centavos)
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-budget" className="text-sm text-slate-600">
+                        Presupuesto (centavos)
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('ads.budget_cents')}
+                        label="Ayuda: presupuesto"
+                      />
+                    </span>
                     <input
                       id="adcampaign-budget"
                       type="text"
@@ -354,9 +392,12 @@ export function AdsSection(): ReactElement {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="adcampaign-start-at" className="block text-sm text-slate-600">
-                      Inicio
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-start-at" className="text-sm text-slate-600">
+                        Inicio
+                      </label>
+                      <FieldHelp content={fieldHelpText('ads.start_at')} label="Ayuda: inicio" />
+                    </span>
                     <input
                       id="adcampaign-start-at"
                       type="text"
@@ -367,9 +408,12 @@ export function AdsSection(): ReactElement {
                     />
                   </div>
                   <div>
-                    <label htmlFor="adcampaign-end-at" className="block text-sm text-slate-600">
-                      Fin
-                    </label>
+                    <span className="flex items-center gap-1">
+                      <label htmlFor="adcampaign-end-at" className="text-sm text-slate-600">
+                        Fin
+                      </label>
+                      <FieldHelp content={fieldHelpText('ads.end_at')} label="Ayuda: fin" />
+                    </span>
                     <input
                       id="adcampaign-end-at"
                       type="text"

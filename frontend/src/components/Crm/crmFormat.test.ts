@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCurrency, getSlaBadge } from '@/components/Crm/crmFormat';
+import { formatCurrency, getSlaBadge, getSlaTooltip } from '@/components/Crm/crmFormat';
 import { makeDeal, makeSla } from '@/test/crmMocks';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -51,6 +51,31 @@ describe('crmFormat', () => {
         label: 'SLA al día',
         className: 'bg-green-100 text-green-700',
       });
+    });
+  });
+
+  describe('getSlaTooltip', () => {
+    it('devuelve null para una oportunidad cerrada o sin política', () => {
+      expect(getSlaTooltip(makeDeal({ status: 'won' }), makeSla())).toBeNull();
+      expect(getSlaTooltip(makeDeal(), undefined)).toBeNull();
+    });
+
+    it('describe el exceso temporal cuando el SLA está vencido', () => {
+      const deal = makeDeal({ created_at: new Date(Date.now() - 40 * DAY_MS).toISOString() });
+      const sla = makeSla({ max_response_hours: 4, max_stay_days: 15 });
+      expect(getSlaTooltip(deal, sla)).toBe('Vencido hace 25 d');
+    });
+
+    it('describe el exceso del tiempo de respuesta cuando está por vencer', () => {
+      const deal = makeDeal({ created_at: new Date(Date.now() - 10 * HOUR_MS).toISOString() });
+      const sla = makeSla({ max_response_hours: 4, max_stay_days: 15 });
+      expect(getSlaTooltip(deal, sla)).toBe('Tiempo de respuesta excedido hace 6 h');
+    });
+
+    it('devuelve null cuando el SLA está al día', () => {
+      const deal = makeDeal({ created_at: new Date(Date.now() - 2 * HOUR_MS).toISOString() });
+      const sla = makeSla({ max_response_hours: 4, max_stay_days: 15 });
+      expect(getSlaTooltip(deal, sla)).toBeNull();
     });
   });
 });

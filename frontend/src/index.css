@@ -4,8 +4,7 @@
 
 :root {
   /* Tipografía del tenant; --omni-font-family se sobreescribe en runtime con la apariencia. */
-  font-family:
-    var(--omni-font-family, 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif);
+  font-family: var(--omni-font-family, 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -35,6 +34,15 @@
   --omni-accent-800: 30 64 175;
   --omni-accent-900: 30 58 138;
   --omni-accent-950: 23 37 84;
+
+  /* Superficies y texto del tenant (por defecto neutro; se sobreescriben en
+     runtime por la apariencia: surfaceColor, textColor y brandBadge). */
+  --omni-surface: 255 255 255;
+  --omni-surface-muted: 248 250 252;
+  --omni-surface-strong: 226 232 240;
+  --omni-text: 15 23 42;
+  --omni-text-muted: 100 116 139;
+  --omni-brand-badge: 16 185 129;
 }
 
 body {

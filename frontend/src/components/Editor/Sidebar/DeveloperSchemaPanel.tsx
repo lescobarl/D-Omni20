@@ -16,6 +16,8 @@
  */
 import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { VisualSchemaEditor } from '@/components/Editor/VisualSchema/VisualSchemaEditor';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 import { useSchemaStore } from '@/store/schemaStore';
 
 /** Vista JSON cargada de forma diferida (Monaco fuera de la ruta crítica). */
@@ -285,12 +287,15 @@ export function DeveloperSchemaPanel(): ReactElement {
 
           <form onSubmit={handleCreateVersion} className="mt-2 space-y-2">
             <div>
-              <label
-                htmlFor="schema-version"
-                className="mb-1 block text-xs font-medium text-slate-600"
-              >
-                Nueva versión
-              </label>
+              <span className="flex items-center gap-1">
+                <label htmlFor="schema-version" className="text-xs font-medium text-slate-600">
+                  Nueva versión
+                </label>
+                <FieldHelp
+                  content={fieldHelpText('editor.schema_version')}
+                  label="Ayuda: nueva versión"
+                />
+              </span>
               <input
                 id="schema-version"
                 type="text"

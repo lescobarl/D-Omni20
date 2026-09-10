@@ -15,6 +15,8 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { INavigationTreeRead } from '@/api/types';
 import type { INavigationTreeInput } from '@/services/operationsService';
 import { useOperationsStore } from '@/store/operationsStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de árboles (las opciones se editan como texto). */
 interface INavigationTreeFormState {
@@ -182,9 +184,15 @@ export function TreesSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="tree-options" className="block text-sm text-slate-600">
-                    Opciones
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="tree-options" className="text-sm text-slate-600">
+                      Opciones
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('operations.tree_options')}
+                      label="Ayuda: opciones"
+                    />
+                  </span>
                   <textarea
                     id="tree-options"
                     rows={4}

@@ -16,6 +16,7 @@ import { ContentSection } from '@/components/Settings/ContentSection';
 import { CatalogSection } from '@/components/Settings/CatalogSection';
 import { ChannelsSection } from '@/components/Settings/ChannelsSection';
 import { BotsSection } from '@/components/Settings/BotsSection';
+import { PortalLookSection } from '@/components/Settings/PortalLookSection';
 
 /** Pestañas disponibles del configurador. */
 type SettingsTab = 'appearance' | 'content' | 'catalog' | 'channels' | 'bots';
@@ -61,10 +62,10 @@ export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): Re
   const showTab = (tab: SettingsTab): boolean => visibleTabs.some((item) => item.id === tab);
 
   const tabButtonClass = (selected: boolean): string =>
-    `flex-1 border-b-2 px-3 py-2 text-sm font-medium transition ${
+    `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
       selected
-        ? 'border-brand-600 text-brand-700'
-        : 'border-transparent text-slate-500 hover:text-slate-700'
+        ? 'bg-white text-slate-900 shadow-panel ring-1 ring-slate-200'
+        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
     }`;
 
   return (
@@ -72,7 +73,7 @@ export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): Re
       <div
         role="tablist"
         aria-label="Configuración del bot"
-        className="flex border-b border-slate-200 bg-white"
+        className="flex items-center gap-1 border-b border-edge bg-white px-6 py-3"
       >
         {visibleTabs.map((tab) => (
           <button
@@ -90,7 +91,8 @@ export function TenantConfigSettings({ config }: ITenantConfigSettingsProps): Re
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto bg-canvas p-6 lg:p-8">
+        <PortalLookSection />
         <div
           role="tabpanel"
           id="settings-panel-appearance"

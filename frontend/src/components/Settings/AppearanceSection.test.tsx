@@ -205,6 +205,50 @@ describe('AppearanceSection', () => {
     expect(screen.getByText('Roboto')).toBeInTheDocument();
   });
 
+  it('oculta el asistente de marca cuando la bandera de IA está apagada', async () => {
+    setTenantConfigService(makeService());
+    setRebrandingService(makeRebrandingService());
+
+    render(<AppearanceSection config={createTestConfig()} />);
+
+    await screen.findByLabelText('Color primario');
+    expect(screen.queryByRole('button', { name: 'Generar propuesta' })).not.toBeInTheDocument();
+  });
+
+  it('genera una propuesta con IA desde una descripción y la muestra', async () => {
+    const proposal = makeAppearanceProposal();
+    const rebranding = makeRebrandingService({
+      generateAppearanceFromPrompt: vi
+        .fn<IRebrandingService['generateAppearanceFromPrompt']>()
+        .mockResolvedValue(proposal),
+    });
+    const user = userEvent.setup();
+    setTenantConfigService(makeService());
+    setRebrandingService(rebranding);
+
+    render(
+      <AppearanceSection
+        config={{
+          ...createTestConfig(),
+          features: { ...createTestConfig().features, aiAssistant: true },
+        }}
+      />,
+    );
+
+    await screen.findByLabelText('Color primario');
+    fireEvent.change(screen.getByLabelText('Describe tu marca'), {
+      target: { value: '  paleta para una inmobiliaria premium  ' },
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Generar propuesta' }));
+    });
+
+    expect(rebranding.generateAppearanceFromPrompt).toHaveBeenCalledWith(
+      'paleta para una inmobiliaria premium',
+    );
+    expect(await screen.findByText('Propuesta detectada')).toBeInTheDocument();
+  });
+
   it('aplica la propuesta detectada al tema y lo guarda', async () => {
     const proposal = makeAppearanceProposal();
     const appearanceService = makeService();

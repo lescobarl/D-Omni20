@@ -14,6 +14,8 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { ITenantChannelRead } from '@/api/types';
 import type { ITenantChannelInput } from '@/services/tenantConfigService';
 import { useTenantConfigStore } from '@/store/tenantConfigStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Estado del formulario de conexión de un canal. */
 interface IChannelFormState {
@@ -118,7 +120,10 @@ export function ChannelsSection(): ReactElement {
   const isLoading = channelsStatus === 'loading' && channels.length === 0;
 
   return (
-    <section aria-labelledby="channels-heading">
+    <section
+      aria-labelledby="channels-heading"
+      className="mx-auto w-full max-w-6xl rounded-2xl border border-edge/70 bg-surface p-6 shadow-panel lg:p-8"
+    >
       <h2 id="channels-heading" className="text-lg font-semibold text-slate-900">
         Canales
       </h2>
@@ -155,9 +160,15 @@ export function ChannelsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="channel-external-id" className="block text-sm text-slate-600">
-                    Identificador externo
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="channel-external-id" className="text-sm text-slate-600">
+                      Identificador externo
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('channels.external_id')}
+                      label="Ayuda: identificador externo"
+                    />
+                  </span>
                   <input
                     id="channel-external-id"
                     type="text"
@@ -168,9 +179,15 @@ export function ChannelsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="channel-phone-number-id" className="block text-sm text-slate-600">
-                    ID del número de teléfono (Meta)
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="channel-phone-number-id" className="text-sm text-slate-600">
+                      ID del número de teléfono (Meta)
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('channels.phone_number_id')}
+                      label="Ayuda: ID del número (Meta)"
+                    />
+                  </span>
                   <input
                     id="channel-phone-number-id"
                     type="text"
@@ -181,9 +198,15 @@ export function ChannelsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="channel-access-token" className="block text-sm text-slate-600">
-                    Token de acceso
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="channel-access-token" className="text-sm text-slate-600">
+                      Token de acceso
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('channels.access_token')}
+                      label="Ayuda: token de acceso"
+                    />
+                  </span>
                   <input
                     id="channel-access-token"
                     type="password"
@@ -195,9 +218,15 @@ export function ChannelsSection(): ReactElement {
                   />
                 </div>
                 <div>
-                  <label htmlFor="channel-webhook-secret" className="block text-sm text-slate-600">
-                    Secreto del webhook
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label htmlFor="channel-webhook-secret" className="text-sm text-slate-600">
+                      Secreto del webhook
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('channels.webhook_secret')}
+                      label="Ayuda: secreto del webhook"
+                    />
+                  </span>
                   <input
                     id="channel-webhook-secret"
                     type="password"
@@ -219,6 +248,10 @@ export function ChannelsSection(): ReactElement {
                   <label htmlFor="channel-enabled" className="text-sm text-slate-600">
                     Conectar habilitado
                   </label>
+                  <FieldHelp
+                    content={fieldHelpText('channels.enabled')}
+                    label="Ayuda: canal habilitado"
+                  />
                 </div>
               </div>
             </fieldset>

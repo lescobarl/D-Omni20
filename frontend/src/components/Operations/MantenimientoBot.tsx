@@ -24,6 +24,8 @@
  */
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useOperationsStore } from '@/store/operationsStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 /** Pestañas internas de la sección de mantenimiento (B.9). */
 type MantenimientoSubTab = 'estado' | 'limpieza' | 'optimizacion' | 'configuracion' | 'backup';
@@ -688,12 +690,18 @@ export function MantenimientoBot(): ReactElement {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="maintenance-schedule"
-                    className="block text-sm font-medium text-slate-700"
-                  >
-                    Programación del mantenimiento
-                  </label>
+                  <span className="flex items-center gap-1">
+                    <label
+                      htmlFor="maintenance-schedule"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Programación del mantenimiento
+                    </label>
+                    <FieldHelp
+                      content={fieldHelpText('operations.maintenance_schedule')}
+                      label="Ayuda: programación del mantenimiento"
+                    />
+                  </span>
                   <input
                     id="maintenance-schedule"
                     name="maintenance-schedule"

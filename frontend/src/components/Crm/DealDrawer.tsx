@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { IStageChangeRead } from '@/api/types';
 import type { ITaskInput } from '@/services/crmService';
 import { useCrmStore } from '@/store/crmStore';
-import { formatCurrency, getSlaBadge } from './crmFormat';
+import { Tooltip } from '@/components/ui';
+import { formatCurrency, getSlaBadge, getSlaTooltip } from './crmFormat';
 
 interface IDealDrawerProps {
   /** Identificador de la oportunidad a mostrar. */
@@ -98,6 +99,23 @@ export function DealDrawer({ dealId, onClose }: IDealDrawerProps): ReactElement 
   }
 
   const slaBadge = getSlaBadge(deal, sla);
+  const slaTooltip = getSlaTooltip(deal, sla);
+  const slaElement =
+    slaBadge === null ? null : slaTooltip === null ? (
+      <span
+        className={`mt-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${slaBadge.className}`}
+      >
+        {slaBadge.label}
+      </span>
+    ) : (
+      <Tooltip content={slaTooltip}>
+        <span
+          className={`mt-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${slaBadge.className}`}
+        >
+          {slaBadge.label}
+        </span>
+      </Tooltip>
+    );
   const currentStage = stages.find((stage) => stage.id === deal.stage_id);
   const otherStages = stages.filter((stage) => stage.id !== deal.stage_id);
   const moveTarget = stages.find((stage) => stage.id === moveStageId);
@@ -212,13 +230,7 @@ export function DealDrawer({ dealId, onClose }: IDealDrawerProps): ReactElement 
           </button>
         </div>
 
-        {slaBadge !== null && (
-          <span
-            className={`mt-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${slaBadge.className}`}
-          >
-            {slaBadge.label}
-          </span>
-        )}
+        {slaElement}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <dl className="rounded-lg border border-slate-200 p-4 text-sm">

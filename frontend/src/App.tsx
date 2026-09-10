@@ -30,6 +30,7 @@ import { useEditorStore } from '@/store/editorStore';
 import { useEditorStoreContext } from '@/store/editorStoreContext';
 import { usePortalStore } from '@/store/portalStore';
 import { useTenantStore } from '@/store/tenantStore';
+import { usePortalUiStore } from '@/store/portalUiStore';
 import { useAdsStore } from '@/store/adsStore';
 import { useHostsStore } from '@/store/hostsStore';
 import { useAuthStore } from '@/store/authStore';
@@ -85,6 +86,28 @@ export default function App({ config }: IAppProps): ReactElement {
   const operationsEnabled = config.features.operations;
   const adsEnabled = config.features.ads;
   const hostsEnabled = config.features.hosts;
+  // Preferencias de look del portal (por navegador): acento y superficie.
+  const portalAccent = usePortalUiStore((state) => state.accent);
+  const portalSurface = usePortalUiStore((state) => state.surface);
+
+  /** Clase del lienzo según la superficie elegida (neutra o tinte de marca). */
+  const canvasClass = portalSurface === 'tint' ? 'bg-brand-50' : 'bg-slate-50';
+
+  /** Clases de las píldoras de navegación según el acento de marca. */
+  const navButtonClass = (active: boolean): string =>
+    portalAccent === 'neutral'
+      ? active
+        ? 'rounded border border-slate-700 bg-slate-900 px-3 py-1 font-medium text-white transition hover:bg-slate-800'
+        : 'rounded border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600 transition hover:bg-slate-100'
+      : active
+        ? 'rounded border border-brand-400 bg-brand-600 px-3 py-1 font-medium text-white transition hover:bg-brand-700'
+        : 'rounded border border-brand-200 bg-brand-50 px-3 py-1 font-medium text-brand-700 transition hover:bg-brand-100';
+
+  /** Clases de la insignia de entorno según el acento elegido. */
+  const envBadgeClass =
+    portalAccent === 'neutral'
+      ? 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'
+      : 'rounded-full bg-brand-100 px-3 py-1 font-medium text-brand-700';
 
   // Selector de tenant en runtime (FASE D — GAP-5): al montar se cargan los
   // tenants disponibles (control plane) y se preselecciona el activo. Cambiar la
@@ -280,7 +303,7 @@ export default function App({ config }: IAppProps): ReactElement {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    <div className={`flex min-h-screen flex-col ${canvasClass} text-slate-900`}>
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-900">{config.appName}</h1>
@@ -293,19 +316,13 @@ export default function App({ config }: IAppProps): ReactElement {
                   onClick={() => navigate(item.view)}
                   aria-pressed={view === item.view}
                   aria-current={view === item.view ? 'page' : undefined}
-                  className={
-                    view === item.view
-                      ? 'rounded border border-brand-400 bg-brand-600 px-3 py-1 font-medium text-white transition hover:bg-brand-700'
-                      : 'rounded border border-brand-200 bg-brand-50 px-3 py-1 font-medium text-brand-700 transition hover:bg-brand-100'
-                  }
+                  className={navButtonClass(view === item.view)}
                 >
                   {item.label}
                 </button>
               ))}
             </nav>
-            <span className="rounded-full bg-brand-100 px-3 py-1 font-medium text-brand-700">
-              {config.appEnv}
-            </span>
+            <span className={envBadgeClass}>{config.appEnv}</span>
             <div className="flex items-center gap-2">
               {/* Selector de tenant: siempre en la parte superior derecha para
                   TODOS los perfiles (la lista se carga al autenticarse). La

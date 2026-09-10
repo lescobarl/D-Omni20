@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import type { ISlaInput } from '@/services/crmService';
 import { useCrmStore } from '@/store/crmStore';
+import { FieldHelp } from '@/components/ui';
+import { fieldHelpText } from '@/config/fieldHelp';
 
 interface ISlaDraft {
   /** Horas máximas para responder (borrador local). */
@@ -116,9 +118,21 @@ export function SlaSettings(): ReactElement {
                   )}
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="block text-sm text-slate-600">
-                    Horas de respuesta
+                  <div>
+                    <span className="flex items-center gap-1">
+                      <label
+                        htmlFor={`sla-${stage.id}-response-hours`}
+                        className="text-sm text-slate-600"
+                      >
+                        Horas de respuesta
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('sla.max_response_hours')}
+                        label="Ayuda: horas de respuesta"
+                      />
+                    </span>
                     <input
+                      id={`sla-${stage.id}-response-hours`}
                       type="number"
                       min={0}
                       value={valueFor(stage.id, 'maxResponseHours')}
@@ -127,10 +141,22 @@ export function SlaSettings(): ReactElement {
                       }
                       className="mt-1 w-28 rounded border border-slate-300 px-3 py-2 text-sm"
                     />
-                  </label>
-                  <label className="block text-sm text-slate-600">
-                    Días máximos
+                  </div>
+                  <div>
+                    <span className="flex items-center gap-1">
+                      <label
+                        htmlFor={`sla-${stage.id}-max-stay-days`}
+                        className="text-sm text-slate-600"
+                      >
+                        Días máximos
+                      </label>
+                      <FieldHelp
+                        content={fieldHelpText('sla.max_stay_days')}
+                        label="Ayuda: días máximos"
+                      />
+                    </span>
                     <input
+                      id={`sla-${stage.id}-max-stay-days`}
                       type="number"
                       min={0}
                       value={valueFor(stage.id, 'maxStayDays')}
@@ -139,7 +165,7 @@ export function SlaSettings(): ReactElement {
                       }
                       className="mt-1 w-28 rounded border border-slate-300 px-3 py-2 text-sm"
                     />
-                  </label>
+                  </div>
                   <button
                     type="submit"
                     className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"

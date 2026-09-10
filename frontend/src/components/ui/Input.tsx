@@ -1,4 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactElement } from 'react';
+import { FieldHelp } from './FieldHelp';
 
 /**
  * Campo de texto compartido de la librería `ui/` (plan §4.2-C).
@@ -9,13 +10,17 @@ import { useId, type InputHTMLAttributes, type ReactElement } from 'react';
  *   `aria-required="true"`.
  * - `error` añade `aria-invalid`, `aria-describedby` y un mensaje con
  *   `role="status"`.
- * - `hint` añade ayuda accesible vía `aria-describedby`.
+ * - `hint` añade ayuda accesible vía `aria-describedby` (visible bajo el campo).
+ * - `help` añade un icono ⓘ con tooltip junto a la etiqueta (ayuda puntual en
+ *   campos técnicos, sin ensuciar el formulario).
  */
 export interface IInputProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Etiqueta accesible del campo (`htmlFor`/`id`). */
   label: string;
   /** Ayuda accesible vía `aria-describedby` (opcional). */
   hint?: string;
+  /** Texto de ayuda mostrado en un tooltip junto a la etiqueta (opcional). */
+  help?: string;
   /** Mensaje de error: añade `aria-invalid` y `aria-describedby`. */
   error?: string | null;
 }
@@ -26,6 +31,7 @@ export interface IInputProps extends InputHTMLAttributes<HTMLInputElement> {
 export function Input({
   label,
   hint,
+  help,
   error,
   id,
   required,
@@ -42,7 +48,7 @@ export function Input({
 
   return (
     <div>
-      <span className="block">
+      <span className={help !== undefined ? 'flex items-center gap-1' : 'block'}>
         <label htmlFor={inputId} className="text-sm text-slate-600">
           {label}
         </label>
@@ -51,6 +57,7 @@ export function Input({
             *
           </span>
         ) : null}
+        {help !== undefined ? <FieldHelp content={help} label={`Ayuda: ${label}`} /> : null}
       </span>
       <input
         id={inputId}

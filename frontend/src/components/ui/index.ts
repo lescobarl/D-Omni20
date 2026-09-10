@@ -18,3 +18,9 @@ export type { IModalProps } from './Modal';
 
 export { Toast } from './Toast';
 export type { IToastItem, IToastProps, ToastTone } from './Toast';
+
+export { Tooltip } from './Tooltip';
+export type { ITooltipProps } from './Tooltip';
+
+export { FieldHelp } from './FieldHelp';
+export type { IFieldHelpProps } from './FieldHelp';
