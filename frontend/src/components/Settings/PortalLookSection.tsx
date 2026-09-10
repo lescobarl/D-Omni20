@@ -2,16 +2,17 @@
  * Sección "Look & feel del portal de configuración" (Studio).
  *
  * Contrato:
- * - Configura la apariencia de la INTERFAZ de configuración (este navegador):
- *   acento de marca (marca del tenant o neutro) y superficie de los módulos
- *   (neutra o con tinte de marca).
- * - No afecta la apariencia del widget del cliente (eso vive en la pestaña
- *   Apariencia). Cambios en caliente sobre la cáscara del Studio.
+ * - Configura la apariencia de la INTERFAZ de configuración, POR TENANT y
+ *   persistida en backend: acento de marca (marca del tenant o neutro) y
+ *   superficie de los módulos (neutra o con tinte de marca).
+ * - Solo visible/editable por rol admin (el endpoint exige Role.ADMIN).
+ * - No afecta la apariencia del widget del cliente (pestaña Apariencia).
  */
 
-import type { ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import { usePortalUiStore } from '@/store/portalUiStore';
-import type { PortalAccent, PortalSurface } from '@/store/portalUiStore';
+import type { PortalAccent, PortalSurface } from '@/api/types';
 
 /** Opciones de acento de marca disponibles. */
 const ACCENT_OPTIONS: ReadonlyArray<{ id: PortalAccent; label: string }> = [
@@ -27,13 +28,26 @@ const SURFACE_OPTIONS: ReadonlyArray<{ id: PortalSurface; label: string }> = [
 
 /**
  * Panel de selección del acento y la superficie del portal de configuración.
- * @returns La tarjeta de preferencias visuales del portal.
+ * @returns La tarjeta de preferencias visuales del portal (o `null` si no es admin).
  */
-export function PortalLookSection(): ReactElement {
+export function PortalLookSection(): ReactElement | null {
+  const activeRole = useAuthStore((state) => state.activeRole);
   const accent = usePortalUiStore((state) => state.accent);
   const surface = usePortalUiStore((state) => state.surface);
-  const setAccent = usePortalUiStore((state) => state.setAccent);
-  const setSurface = usePortalUiStore((state) => state.setSurface);
+  const status = usePortalUiStore((state) => state.status);
+  const error = usePortalUiStore((state) => state.error);
+  const hydrate = usePortalUiStore((state) => state.hydrate);
+  const save = usePortalUiStore((state) => state.save);
+
+  useEffect(() => {
+    if (activeRole === 'admin') {
+      void hydrate();
+    }
+  }, [activeRole, hydrate]);
+
+  if (activeRole !== 'admin') {
+    return null;
+  }
 
   return (
     <section
@@ -44,7 +58,7 @@ export function PortalLookSection(): ReactElement {
         Look &amp; feel del portal de configuración
       </h2>
       <p className="mt-1 text-sm text-slate-500">
-        Aplica a toda la interfaz del Studio en este navegador. La marca del widget del cliente se
+        Se aplica a toda la interfaz del Studio para este tenant. La marca del widget del cliente se
         configura en la pestaña Apariencia.
       </p>
 
@@ -57,11 +71,12 @@ export function PortalLookSection(): ReactElement {
                 key={option.id}
                 type="button"
                 aria-pressed={accent === option.id}
-                onClick={() => setAccent(option.id)}
+                disabled={status === 'loading'}
+                onClick={() => void save({ portal_accent: option.id, portal_surface: surface })}
                 className={
                   accent === option.id
-                    ? 'rounded border border-brand-600 bg-brand-600 px-3 py-1.5 text-sm font-medium text-white'
-                    : 'rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50'
+                    ? 'rounded border border-brand-600 bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50'
+                    : 'rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50'
                 }
               >
                 {option.label}
@@ -78,11 +93,12 @@ export function PortalLookSection(): ReactElement {
                 key={option.id}
                 type="button"
                 aria-pressed={surface === option.id}
-                onClick={() => setSurface(option.id)}
+                disabled={status === 'loading'}
+                onClick={() => void save({ portal_accent: accent, portal_surface: option.id })}
                 className={
                   surface === option.id
-                    ? 'rounded border border-brand-600 bg-brand-600 px-3 py-1.5 text-sm font-medium text-white'
-                    : 'rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50'
+                    ? 'rounded border border-brand-600 bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50'
+                    : 'rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50'
                 }
               >
                 {option.label}
@@ -91,6 +107,10 @@ export function PortalLookSection(): ReactElement {
           </div>
         </div>
       </div>
+
+      <span role="status" aria-live="polite" className="mt-3 block text-sm">
+        {error !== null && <span className="text-red-600">{error}</span>}
+      </span>
     </section>
   );
 }

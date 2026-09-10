@@ -118,6 +118,8 @@ function makeTenantAppearanceRead(
     brand_badge: 'OmniBotIA',
     logo_url: 'https://cdn.omnibotia.example/logo.png',
     font_family: 'Inter',
+    portal_accent: 'brand',
+    portal_surface: 'light',
     version: 1,
     revision: 1,
     created_at: '2026-08-18T00:00:00Z',

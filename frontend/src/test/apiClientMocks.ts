@@ -50,6 +50,7 @@ export function makeApiClientMock(): IApiClient {
     deployToCdn: vi.fn(),
     getTenantAppearance: vi.fn(),
     upsertTenantAppearance: vi.fn(),
+    updatePortalLook: vi.fn(),
     // Rebranding por URL (Fase 5) — espejo del contrato IApiClient.
     extractUrlStyles: vi.fn(),
     generateAppearance: vi.fn(),

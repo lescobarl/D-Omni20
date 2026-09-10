@@ -40,6 +40,8 @@ function makeAppearanceRead(overrides: Partial<ITenantAppearanceRead> = {}): ITe
     brand_badge: 'OmniBotIA',
     logo_url: 'https://cdn.omnibotia.example/logo.png',
     font_family: 'Inter',
+    portal_accent: 'brand',
+    portal_surface: 'light',
     version: 1,
     revision: 1,
     updated_at: '2026-08-19T00:00:00Z',

@@ -65,6 +65,8 @@ function makeAppearanceRead(overrides: Partial<ITenantAppearanceRead> = {}): ITe
     brand_badge: '#0ea5e9',
     logo_url: 'https://cdn.omnibotia.example/logo.png',
     font_family: 'Inter',
+    portal_accent: 'brand',
+    portal_surface: 'light',
     version: 1,
     revision: 1,
     updated_at: '2026-08-19T00:00:00Z',
@@ -145,6 +147,12 @@ function makeService(overrides: Partial<ITenantConfigService> = {}): ITenantConf
     saveTenantAppearance: vi
       .fn<ITenantConfigService['saveTenantAppearance']>()
       .mockResolvedValue(makeAppearanceRead()),
+    getPortalLook: vi
+      .fn<ITenantConfigService['getPortalLook']>()
+      .mockResolvedValue({ portal_accent: 'brand', portal_surface: 'light' }),
+    savePortalLook: vi
+      .fn<ITenantConfigService['savePortalLook']>()
+      .mockResolvedValue({ portal_accent: 'brand', portal_surface: 'light' }),
     listContentItems: vi
       .fn<ITenantConfigService['listContentItems']>()
       .mockResolvedValue(makePage([])),

@@ -22,6 +22,7 @@ import type {
   IContentKind,
   IPage,
   IPageQuery,
+  IPortalLook,
   ITenantAppearanceRead,
   ITenantAppearanceUpsert,
   ITenantChannelCreate,
@@ -85,6 +86,10 @@ export interface ITenantConfigService {
   getTenantAppearance(): Promise<IAppTheme | null>;
   /** Crea o reemplaza la apariencia del tenant (una fila por tenant, PUT idempotente). */
   saveTenantAppearance(theme: IAppTheme): Promise<ITenantAppearanceRead>;
+  /** Devuelve el look del portal de configuración del tenant (defaults si no hay fila). */
+  getPortalLook(): Promise<IPortalLook>;
+  /** Guarda el look del portal de configuración del tenant (solo admin). */
+  savePortalLook(look: IPortalLook): Promise<IPortalLook>;
   /** Lista el contenido estructurado del tenant (paginado). */
   listContentItems(query?: IPageQuery): Promise<IPage<IContentItemRead>>;
   /** Crea un ítem de contenido en el tenant activo. */
@@ -169,6 +174,36 @@ export class BackendTenantConfigService implements ITenantConfigService {
       font_family: theme.fontFamily ?? undefined,
     };
     return this.apiClient.upsertTenantAppearance(payload);
+  }
+
+  /** Devuelve el look del portal del tenant o los defaults si aún no está configurado. */
+  public async getPortalLook(): Promise<IPortalLook> {
+    this.logger?.debug('tenant.portal_look.get', {});
+    try {
+      const appearance = await this.apiClient.getTenantAppearance();
+      return {
+        portal_accent: appearance.portal_accent,
+        portal_surface: appearance.portal_surface,
+      };
+    } catch (error) {
+      if (error instanceof ApiHttpError && error.status === 404) {
+        return { portal_accent: 'brand', portal_surface: 'light' };
+      }
+      throw error;
+    }
+  }
+
+  /** Guarda el look del portal del tenant (endpoint exclusivo de admin). */
+  public async savePortalLook(look: IPortalLook): Promise<IPortalLook> {
+    this.logger?.info('tenant.portal_look.save', {
+      accent: look.portal_accent,
+      surface: look.portal_surface,
+    });
+    const row = await this.apiClient.updatePortalLook(look);
+    return {
+      portal_accent: row.portal_accent,
+      portal_surface: row.portal_surface,
+    };
   }
 
   /** Lista el contenido estructurado del tenant (paginado). */

@@ -41,6 +41,7 @@ import { setCompilerService } from '@/store/compilerStore';
 import { setMarketplaceService } from '@/store/marketplaceStore';
 import { setSchemaService } from '@/store/schemaStore';
 import { setTenantConfigService, setRebrandingService } from '@/store/tenantConfigStore';
+import { setPortalLookService } from '@/store/portalUiStore';
 import { setBotService } from '@/store/botStore';
 import { setWorkflowService } from '@/store/workflowStore';
 import { setOperationsService } from '@/store/operationsStore';
@@ -94,7 +95,9 @@ setCdnService(createCdnService(apiClient, logger));
 // la implementación real solo cuando la bandera `appearance` está activa (regla CLAUDE:
 // DI y feature flags; plan §11.2 apariencia del tenant).
 if (config.features.appearance) {
-  setTenantConfigService(createTenantConfigService(apiClient, logger));
+  const tenantConfigService = createTenantConfigService(apiClient, logger);
+  setTenantConfigService(tenantConfigService);
+  setPortalLookService(tenantConfigService);
   // Rebranding y asistente de marca comparten el mismo servicio de apariencia:
   // se registra junto al configurador para que la UI pueda consultar el servicio
   // disponible (la pestaña Configuración solo existe con esta bandera).

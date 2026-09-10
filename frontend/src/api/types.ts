@@ -819,6 +819,24 @@ export interface ITenantAppearanceRead extends ITenantAppearanceUpsert, IConfigS
   version: number;
   /** Marca de tiempo de creación (ISO 8601). */
   created_at: string;
+  /** Acento del portal de configuración (Studio), por tenant. */
+  portal_accent: PortalAccent;
+  /** Superficie de los módulos del portal de configuración, por tenant. */
+  portal_surface: PortalSurface;
+}
+
+/** Acento del portal de configuración (Studio). */
+export type PortalAccent = 'brand' | 'neutral';
+
+/** Superficie de los módulos del portal de configuración (Studio). */
+export type PortalSurface = 'light' | 'tint';
+
+/** Preferencias de look del portal de configuración (por tenant, solo admin). */
+export interface IPortalLook {
+  /** Acento de marca usado en la navegación del portal. */
+  portal_accent: PortalAccent;
+  /** Superficie de fondo de los módulos del portal. */
+  portal_surface: PortalSurface;
 }
 
 /** Propuesta de apariencia derivada de una URL de marca (Fase 5). */

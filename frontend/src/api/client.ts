@@ -161,6 +161,7 @@ import type {
   IRecipientFileRead,
   ITenantAppearanceRead,
   ITenantAppearanceUpsert,
+  IPortalLook,
   ITenantChannelCreate,
   ITenantChannelRead,
   ITenantChannelUpdate,
@@ -327,6 +328,8 @@ export interface IApiClient {
   getTenantAppearance(): Promise<ITenantAppearanceRead>;
   /** Crea o reemplaza la apariencia del tenant activo (una fila por tenant). */
   upsertTenantAppearance(payload: ITenantAppearanceUpsert): Promise<ITenantAppearanceRead>;
+  /** Actualiza solo el look del portal de configuración (por tenant, solo admin). */
+  updatePortalLook(payload: IPortalLook): Promise<ITenantAppearanceRead>;
   /** Extrae una propuesta de apariencia desde una URL de marca (Fase 5). */
   extractUrlStyles(url: string): Promise<IAppearanceProposal>;
   /** Genera una propuesta de apariencia con IA desde una descripción (sin persistir). */
@@ -1075,6 +1078,14 @@ export class HttpApiClient implements IApiClient {
   ): Promise<ITenantAppearanceRead> {
     return this.request<ITenantAppearanceRead>('PUT', API_PATHS.appearance, {
       operation: 'tenant.appearance.upsert',
+      body: payload,
+    });
+  }
+
+  /** Actualiza solo el look del portal de configuración (por tenant, solo admin). */
+  public async updatePortalLook(payload: IPortalLook): Promise<ITenantAppearanceRead> {
+    return this.request<ITenantAppearanceRead>('PUT', `${API_PATHS.appearance}/portal-look`, {
+      operation: 'tenant.appearance.portal_look',
       body: payload,
     });
   }

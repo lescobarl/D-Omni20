@@ -109,6 +109,9 @@ export default function App({ config }: IAppProps): ReactElement {
       ? 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'
       : 'rounded-full bg-brand-100 px-3 py-1 font-medium text-brand-700';
 
+  /** Hidrata el look del portal (por tenant) desde el backend. */
+  const hydratePortalLook = usePortalUiStore((state) => state.hydrate);
+
   // Selector de tenant en runtime (FASE D — GAP-5): al montar se cargan los
   // tenants disponibles (control plane) y se preselecciona el activo. Cambiar la
   // selección fija el tenant activo para todas las llamadas posteriores.
@@ -159,6 +162,14 @@ export default function App({ config }: IAppProps): ReactElement {
       void loadMe();
     }
   }, [isAuthenticated, loadMe]);
+
+  // Look del portal de configuración: se hidrata desde backend al fijar el
+  // tenant activo (es preferencia POR TENANT, visible para todos sus miembros).
+  useEffect(() => {
+    if (activeTenantId !== null) {
+      void hydratePortalLook();
+    }
+  }, [activeTenantId, hydratePortalLook]);
 
   // Tenant visible: el activo en runtime si ya se cargó; en caso contrario se
   // degrada al tenant de arranque (configuración) para no romper la UI.
