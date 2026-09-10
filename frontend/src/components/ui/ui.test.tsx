@@ -201,9 +201,10 @@ describe('Librería de componentes compartidos (ui)', () => {
   });
 
   describe('FieldHelp', () => {
-    it('expone un botón de ayuda con nombre accesible propio', () => {
+    it('expone un botón de ayuda con nombre accesible genérico y su campo', () => {
       render(<FieldHelp content="Código único del producto." label="Ayuda: SKU" />);
-      expect(screen.getByRole('button', { name: 'Ayuda: SKU' })).toBeInTheDocument();
+      const button = screen.getByRole('button', { name: 'Ayuda contextual' });
+      expect(button).toHaveAttribute('data-help-for', 'Ayuda: SKU');
     });
 
     it('muestra el texto de ayuda al enfocar el icono', () => {
@@ -213,7 +214,7 @@ describe('Librería de componentes compartidos (ui)', () => {
       const bubble = container.querySelector('[role="tooltip"]');
       expect(bubble).not.toBeNull();
       expect(bubble).toHaveClass('invisible');
-      fireEvent.focus(screen.getByRole('button', { name: 'Ayuda: SKU' }));
+      fireEvent.focus(screen.getByRole('button', { name: 'Ayuda contextual' }));
       expect(bubble).toHaveClass('visible');
       expect(bubble).toHaveTextContent('Código único del producto.');
     });

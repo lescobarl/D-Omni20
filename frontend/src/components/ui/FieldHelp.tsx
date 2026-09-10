@@ -9,13 +9,18 @@ import { Tooltip } from './Tooltip';
  * (`role="tooltip"`) vinculado con `aria-describedby`: visible en hover y al
  * enfocar por teclado, y anunciado por lectores de pantalla al tabular al icono.
  *
+ * El nombre accesible del botón es GENÉRICO («Ayuda contextual») a propósito:
+ * incluir el nombre del campo colisiona con los localizadores
+ * `getByLabel(<campo>)` (el botón quedaría como segundo match). El nombre del
+ * campo se conserva en `data-help-for` para depuración, no para accesibilidad.
+ *
  * El contenido NO se escribe en el componente: el llamador lo obtiene del
  * catálogo central de ayuda de campos (única fuente de verdad mantenible).
  */
 export interface IFieldHelpProps {
   /** Texto de ayuda que se mostrará en el globo y se anunciará al lector. */
   content: string;
-  /** Nombre accesible del botón de ayuda (por defecto «Ayuda»). */
+  /** Nombre del campo al que da soporte (solo `data-help-for`, no accesible). */
   label?: string;
   /** Clases adicionales para el contenedor relativo del tooltip. */
   className?: string;
@@ -27,16 +32,13 @@ export interface IFieldHelpProps {
  * @param props - Propiedades del componente (ver {@link IFieldHelpProps}).
  * @returns Un botón de información con su globo de ayuda.
  */
-export function FieldHelp({
-  content,
-  label = 'Ayuda',
-  className = '',
-}: IFieldHelpProps): ReactElement {
+export function FieldHelp({ content, label, className = '' }: IFieldHelpProps): ReactElement {
   return (
     <Tooltip content={content} className={className}>
       <button
         type="button"
-        aria-label={label}
+        aria-label="Ayuda contextual"
+        data-help-for={label ?? ''}
         className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
       >
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-4 w-4">
